@@ -117,23 +117,25 @@ public:
 //		built_in_functions[name] = fun;
 //	}
 
-	Scope(const Scope* p = nullptr)
+	Scope(Scope* p = nullptr)
 	{
 		parent = p;
 	}
 
 	~Scope();
 
-	const Scope* parent;
+	Scope* parent;
+
+	
 
 	Object* find(const std::string& name)
 	{
-		const Scope* current = this;
+		Scope* current = this;
 		while (current != nullptr)
 		{
-			if (variable_table.find(name) != variable_table.end())
+			if (current->variable_table.find(name) != current->variable_table.end())
 			{
-				return variable_table[name];
+				return current->variable_table[name];
 			}
 			current = current->parent;
 		}
@@ -141,8 +143,27 @@ public:
 	}
 
 	Object* define(const std::string& name, Object* value)
-	{		
+	{
+		if (variable_table.find(name) != variable_table.end())
+		{
+			throw Exception("Variable: " + name + " has been defined");
+		}
 		return variable_table[name] = value;
+	}
+
+	Object* modify(const std::string& name, Object* value)
+	{
+		Scope* current = this;
+		while (current != nullptr)
+		{
+			if (current->variable_table.find(name) != current->variable_table.end())
+			{
+				delete current->variable_table[name];
+				return current->variable_table[name] = value;
+			}
+			current = current->parent;
+		}
+		throw Exception(name + " is not found in current scope");
 	}
 
 	Object* find_in_top(const std::string& name)
@@ -160,7 +181,7 @@ public:
 		{
 			throw Exception("Too many arguments");
 		}
-		std::shared_ptr<Scope> new_scope = std::make_shared<Scope>(this);
+		std::shared_ptr<Scope> new_scope = std::make_shared<Scope>(const_cast<Scope*>(this));
 		for (size_t i = 0; i < values.size(); i++)
 		{
 			new_scope->variable_table[names[i]] = values[i];

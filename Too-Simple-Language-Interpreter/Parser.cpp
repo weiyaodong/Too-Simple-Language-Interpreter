@@ -3,13 +3,81 @@
 
 Object ASTNode::eval(Scope* scope) const
 {
+	if (type == AST_TERM)
+	{
+		if (children.size() == 1)
+		{
+			return children[0].eval(scope);
+		}
+		std::vector<int> num;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			Object temp = children[i].eval(scope);
+			if (temp.type != Object::NUMBER)
+			{
+				// todo
+				// throw Exception(to_string(temp) + " is not a Number");
+				throw Exception("Only Numbers can be calculated now");
+			}
+			num.push_back(temp.num);
+		}
+		int ans = num[0];
+		for (size_t i = 0; i < children.size() - 1; i++)
+		{
+			if (calc_flag[i])
+			{
+				ans *= num[i + 1];
+			}
+			else
+			{
+				if (num[i + 1] == 0)
+				{
+					throw Exception("Devide by zero");
+				}
+				ans /= num[i + 1];
+			}
+		}
+		return Object(Object::NUMBER, ans);
+	}
+	if (type == AST_EXPR)
+	{
+		if (children.size() == 1)
+		{
+			return children[0].eval(scope);
+		}
+		std::vector<int> num;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			Object temp = children[i].eval(scope);
+			if (temp.type != Object::NUMBER)
+			{
+				// todo
+				// throw Exception(to_string(temp) + " is not a Number");
+				throw Exception("Only Numbers can be calculated now");
+			}
+			num.push_back(temp.num);
+		}
+		int ans = num[0];
+		for (size_t i = 0; i < children.size() - 1; i++)
+		{
+			if (calc_flag[i])
+			{
+				ans += num[i + 1];
+			}
+			else
+			{
+				ans -= num[i + 1];
+			}
+		}
+		return Object(Object::NUMBER, ans);
+	}
 	if (type == AST_NUM)
 	{
 		return Object(Object::NUMBER, num);
 	}
 	if (type == AST_IDENT)
 	{
-		return *scope->find(name);
+		return *scope->find(name); // caution
 	}
 	if (type == AST_VAR_DEF_EXPR)
 	{
@@ -100,79 +168,7 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_ASN_EXPR)
 	{
-		auto obj = scope->find(children[0].name);
-		delete obj;
-		return *(scope->define(children[0].name, new Object(children[1].eval(scope))));
-	
-//		return *scope->define(children[0].name, new Object(children[1].eval(scope)));
-	}
-	if (type == AST_TERM)
-	{
-		if (children.size() == 1)
-		{
-			return children[0].eval(scope);
-		}
-		std::vector<int> num;
-		for (size_t i = 0; i < children.size(); i++)
-		{
-			Object temp = children[i].eval(scope);
-			if (temp.type != Object::NUMBER)
-			{
-				// todo
-				// throw Exception(to_string(temp) + " is not a Number");
-				throw Exception("Only Numbers can be calculated now");
-			}
-			num.push_back(temp.num);
-		}
-		int ans = num[0];
-		for (size_t i = 0; i < children.size() - 1; i++)
-		{
-			if (calc_flag[i])
-			{
-				ans *= num[i + 1];
-			}
-			else
-			{
-				if (num[i + 1] == 0)
-				{
-					throw Exception("Devide by zero");
-				}
-				ans /= num[i + 1];
-			}
-		}
-		return Object(Object::NUMBER, ans);
-	}
-	if (type == AST_EXPR)
-	{
-		if (children.size() == 1)
-		{
-			return children[0].eval(scope);
-		}
-		std::vector<int> num;
-		for (size_t i = 0; i < children.size(); i++)
-		{
-			Object temp = children[i].eval(scope);
-			if (temp.type != Object::NUMBER)
-			{
-				// todo
-				// throw Exception(to_string(temp) + " is not a Number");
-				throw Exception("Only Numbers can be calculated now");
-			}
-			num.push_back(temp.num);
-		}
-		int ans = num[0];
-		for (size_t i = 0; i < children.size() - 1; i++)
-		{
-			if (calc_flag[i])
-			{
-				ans += num[i + 1];
-			}
-			else
-			{
-				ans -= num[i + 1];
-			}
-		}
-		return Object(Object::NUMBER, ans);
+		return *scope->modify(children[0].name, new Object(children[1].eval(scope)));
 	}
 	if (type == AST_WHILE_STMT)
 	{
@@ -310,12 +306,12 @@ std::string to_string<ASTNode>(const ASTNode& node)
 		{
 			return "{}";
 		}
-		std::string result = "{" + to_string(node.children[0]);
+		std::string result = "{\n" + to_string(node.children[0]);
 		for (size_t i = 1; i < node.children.size(); i++)
 		{
 			result += "\n" + to_string(node.children[i]);
 		}
-		return result + "}";
+		return result + "\n}";
 	}
 	if (node.type == ASTNode::AST_IF_STMT)
 	{
@@ -790,6 +786,7 @@ void test_for_evaluator()
 	while (true)
 	{
 		str.clear();
+		std::cout << ">>>> ";
 		std::string temp;
 		std::cin >> temp;
 		while (temp != "end")
@@ -802,12 +799,12 @@ void test_for_evaluator()
 		try
 		{
 			nodes[counter] = parser.parse_statement();
-			std::cout << to_string(nodes[counter]) << std::endl;
-			std::cout << to_string(nodes[counter].eval(scope)) << std::endl;
+//			std::cout << "P: " << to_string(nodes[counter]) << std::endl;
+			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
 		}
 		catch(Exception exp)
 		{
-			std::cout << exp.get_message() << std::endl;
+			std::cout << "Error : " << exp.get_message() << std::endl;
 		}
 		counter++;
 	}
