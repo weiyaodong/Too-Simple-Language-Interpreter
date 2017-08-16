@@ -22,10 +22,9 @@ public:
 	};
 
 	 
-	Object(): num(0), boo(false)
+	Object(): num(0), boo(false), body(nullptr)
 	{
 		type = NOTHING;
-		body = nullptr;
 	}
 
 	explicit Object(Object_Type t) : type(t), body(nullptr), scope(nullptr)
@@ -88,7 +87,7 @@ public:
 	Object_Type type;
 
 	// function
-	ASTNode* body;
+	const ASTNode* body;
 	std::vector<std::string> parameters;
 	std::shared_ptr<Scope> scope;
 
@@ -111,12 +110,12 @@ class Scope
 {
 	std::map<std::string, Object*> variable_table;
 public:
-	static std::map<std::string, std::function<Object(std::vector<ASTNode>, Scope)>> built_in_functions;
-
-	static void build_in(const std::string& name, const std::function<Object(std::vector<ASTNode>, Scope)>& fun)
-	{
-		built_in_functions[name] = fun;
-	}
+//	static std::map<std::string, std::function<Object(std::vector<ASTNode>, Scope)>> built_in_functions;
+//
+//	static void build_in(const std::string& name, const std::function<Object(std::vector<ASTNode>, Scope)>& fun)
+//	{
+//		built_in_functions[name] = fun;
+//	}
 
 	Scope(const Scope* p = nullptr)
 	{

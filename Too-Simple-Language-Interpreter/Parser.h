@@ -3,7 +3,6 @@
 #include "Evaluator.h"
 #include <functional>
 #include <vector>
-#include <iostream>
 
 class Object;
 class Scope;
@@ -49,13 +48,22 @@ public:
 		}
 	}
 
+	ASTNode(const ASTNode& ast)
+	{
+		num = ast.num;
+		children = ast.children;
+		calc_flag = ast.calc_flag;
+		name = ast.name;
+		type = ast.type;
+	}
+
 	int num;
 	std::vector<ASTNode> children;
 	std::vector<bool> calc_flag;
 	std::string name;
 	ASTNode_Type type;
 
-	Object eval(Scope* scope);
+	Object eval(Scope* scope) const;
 };
 
 template<>

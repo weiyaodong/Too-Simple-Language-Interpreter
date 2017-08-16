@@ -11,7 +11,7 @@ Object Object::evaluate() const
 	if (parameters.size() == 0)
 	{
 		return body->eval(scope.get());
-	}
+	}  
 	return *this; // ?
 }
 

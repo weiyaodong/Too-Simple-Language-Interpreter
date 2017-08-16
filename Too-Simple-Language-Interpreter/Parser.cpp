@@ -1,7 +1,7 @@
 #include "Parser.h"
 #include <iostream>
 
-Object ASTNode::eval(Scope* scope)
+Object ASTNode::eval(Scope* scope) const
 {
 	if (type == AST_NUM)
 	{
@@ -785,20 +785,31 @@ void test_for_evaluator()
 {
 	std::string str;
 	Scope* scope = new Scope;
+	std::vector<ASTNode> nodes(1000);
+	int counter = 0;
 	while (true)
 	{
-		std::getline(std::cin, str);
+		str.clear();
+		std::string temp;
+		std::cin >> temp;
+		while (temp != "end")
+		{
+			str += temp+" ";
+			std::cin >> temp;
+		}
+//		std::getline(std::cin, str);
 		Parser parser(str);
 		try
 		{
-			ASTNode ast = parser.parse_statement();
-			std::cout << to_string(ast) << std::endl;
-			std::cout << to_string(ast.eval(scope)) << std::endl;
+			nodes[counter] = parser.parse_statement();
+			std::cout << to_string(nodes[counter]) << std::endl;
+			std::cout << to_string(nodes[counter].eval(scope)) << std::endl;
 		}
 		catch(Exception exp)
 		{
 			std::cout << exp.get_message() << std::endl;
 		}
+		counter++;
 	}
 }
 
