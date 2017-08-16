@@ -1,6 +1,220 @@
 #include "Parser.h"
 #include <iostream>
 
+Object ASTNode::eval(Scope* scope)
+{
+	if (type == AST_NUM)
+	{
+		return Object(Object::NUMBER, num);
+	}
+	if (type == AST_IDENT)
+	{
+		return *scope->find(name);
+	}
+	if (type == AST_VAR_DEF_EXPR)
+	{
+		if (children.size() == 1)
+		{
+			scope->define(children[0].name, new Object());
+		}
+		if (children.size() == 2)
+		{
+			scope->define(children[0].name, new Object(children[1].eval(scope)));
+		}
+		return Object();
+	}
+	if (type == AST_LAMBDA_EXPR)
+	{
+		Object temp;
+		temp.type = Object::FUNCTION;
+		temp.scope = std::make_shared<Scope>(scope);
+		std::vector<std::string> param;
+		for (size_t i = 0; i < children[0].children.size(); i++)
+		{
+			param.push_back(children[0].children[i].name);
+		}
+		temp.parameters = param;
+		temp.body = &children[1];
+		return temp;
+	}
+	if (type == AST_FUN_DEF_STMT)
+	{
+		Object* temp = new Object();
+		temp->type = Object::FUNCTION;
+		temp->scope = std::make_shared<Scope>(scope);
+		std::vector<std::string> param;
+		for (size_t i = 0; i < children[1].children.size(); i++)
+		{
+			param.push_back(children[1].children[i].name);
+		}
+		temp->parameters = param;
+		temp->body = &children[2];
+		scope->define(children[0].name, temp);
+		return Object();
+	}
+	if (type == AST_FUN_CALL_EXPR)
+	{
+		Object fun = children[0].eval(scope);          
+		if (fun.type != Object::FUNCTION)
+		{
+			throw Exception(" <" + to_string(children[0]) + "> is not a function");
+		}
+		if (children[1].children.size() > fun.parameters.size())
+		{
+			throw Exception("Too many arguments for function : " + to_string(fun));
+		}
+		std::vector<Object> param;
+		for (size_t i = 0; i < children[1].children.size(); i++)
+		{
+			param.push_back(children[1].children[i].eval(scope));
+		}
+		if (fun.body->type != AST_STMTS)
+		{
+			return fun.evaluate(param);
+		}
+		try
+		{
+			return fun.evaluate(param);
+		}
+		catch (const Object& obj)
+		{
+			return obj;
+		}
+		catch (Exception exp)
+		{
+			throw;
+		}
+	}
+	if (type == AST_IF_STMT) // todo
+	{
+		auto temp = children[0].eval(scope);
+		if (temp.type == Object::NUMBER && temp.num == 0)
+		{
+			return Object();
+		}
+		return children[1].eval(scope);
+	}
+	if (type == AST_RET_STMT)
+	{
+		throw children[0].eval(scope);
+	}
+	if (type == AST_ASN_EXPR)
+	{
+		auto obj = scope->find(children[0].name);
+		delete obj;
+		return *(scope->define(children[0].name, new Object(children[1].eval(scope))));
+	
+//		return *scope->define(children[0].name, new Object(children[1].eval(scope)));
+	}
+	if (type == AST_TERM)
+	{
+		if (children.size() == 1)
+		{
+			return children[0].eval(scope);
+		}
+		std::vector<int> num;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			Object temp = children[i].eval(scope);
+			if (temp.type != Object::NUMBER)
+			{
+				// todo
+				// throw Exception(to_string(temp) + " is not a Number");
+				throw Exception("Only Numbers can be calculated now");
+			}
+			num.push_back(temp.num);
+		}
+		int ans = num[0];
+		for (size_t i = 0; i < children.size() - 1; i++)
+		{
+			if (calc_flag[i])
+			{
+				ans *= num[i + 1];
+			}
+			else
+			{
+				if (num[i + 1] == 0)
+				{
+					throw Exception("Devide by zero");
+				}
+				ans /= num[i + 1];
+			}
+		}
+		return Object(Object::NUMBER, ans);
+	}
+	if (type == AST_EXPR)
+	{
+		if (children.size() == 1)
+		{
+			return children[0].eval(scope);
+		}
+		std::vector<int> num;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			Object temp = children[i].eval(scope);
+			if (temp.type != Object::NUMBER)
+			{
+				// todo
+				// throw Exception(to_string(temp) + " is not a Number");
+				throw Exception("Only Numbers can be calculated now");
+			}
+			num.push_back(temp.num);
+		}
+		int ans = num[0];
+		for (size_t i = 0; i < children.size() - 1; i++)
+		{
+			if (calc_flag[i])
+			{
+				ans += num[i + 1];
+			}
+			else
+			{
+				ans -= num[i + 1];
+			}
+		}
+		return Object(Object::NUMBER, ans);
+	}
+	if (type == AST_WHILE_STMT)
+	{
+		auto temp = children[0].eval(scope);
+		Object result;
+		while (temp.type == Object::NUMBER && temp.num == 0)
+		{
+			try
+			{
+				result = children[1].eval(scope);
+			}
+			catch (Exception exp)
+			{
+				throw;
+			}
+			catch (...)
+			{
+				// todo
+				// deal with "continue" and "break"
+			}
+		}
+		return result;
+	}
+	if (type == AST_STMTS)
+	{
+		Object temp;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			temp = children[i].eval(scope);
+		}
+		return temp;
+	}
+	if (type == AST_STMT)
+	{
+		return children[0].eval(scope);
+	}
+	else
+	{
+		throw Exception("what the fuck ?");
+	}
+}
+
 template <>
 std::string to_string<ASTNode>(const ASTNode& node)
 {
@@ -54,14 +268,14 @@ std::string to_string<ASTNode>(const ASTNode& node)
 		}
 		return result + ")";
 	}
-	if (node.type == ASTNode::AST_ARITH_FACTOR)
-	{
-		if (node.children[0].type == ASTNode::AST_EXPR)
-		{
-			return "(" + to_string(node.children[0]) + ")";
-		}
-		return to_string(node.children[0]);
-	}
+//	if (node.type == ASTNode::AST_ARITH_FACTOR)
+//	{
+//		if (node.children[0].type == ASTNode::AST_EXPR)
+//		{
+//			return "(" + to_string(node.children[0]) + ")";
+//		}
+//		return to_string(node.children[0]);
+//	}
 	if (node.type == ASTNode::AST_FUN_CALL_EXPR)
 	{
 		if (node.children[0].type == ASTNode::AST_IDENT)
@@ -96,12 +310,12 @@ std::string to_string<ASTNode>(const ASTNode& node)
 		{
 			return "{}";
 		}
-		std::string result = "{\n" + to_string(node.children[0]);
+		std::string result = "{" + to_string(node.children[0]);
 		for (size_t i = 1; i < node.children.size(); i++)
 		{
 			result += "\n" + to_string(node.children[i]);
 		}
-		return result + "\n}";
+		return result + "}";
 	}
 	if (node.type == ASTNode::AST_IF_STMT)
 	{
@@ -113,7 +327,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_RET_STMT)
 	{
-		return "return " + to_string(node.children[0]);
+		return "ret " + to_string(node.children[0]) + ";";
 	}
 	if (node.type == ASTNode::AST_FUN_DEF_PARA_LIST)
 	{
@@ -146,6 +360,14 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	if (node.type == ASTNode::AST_ASN_EXPR)
 	{
 		return to_string(node.children[0]) + " = " + to_string(node.children[1]);
+	}
+	if (node.type == ASTNode::AST_VAR_DEF_EXPR)
+	{
+		if (node.children.size() == 1)
+		{
+			return "var " + to_string(node.children[0]) + ";";
+		}
+		return "var " + to_string(node.children[0]) + " = " + to_string(node.children[1]) + ";";
 	}
 	return {};
 }
@@ -301,6 +523,10 @@ ASTNode Parser::parse_statement()
 	{
 		return parse_return_statement();
 	}
+	if (current_token() == "var")
+	{
+		return parse_variable_definition_statement();
+	}
 	ASTNode temp;
 	temp.type = ASTNode::AST_STMT;
 	temp.children.push_back(parse_expression());
@@ -349,6 +575,7 @@ ASTNode Parser::parse_return_statement()
 	temp.type = ASTNode::AST_RET_STMT;
 	match_token("ret");
 	temp.children.push_back(parse_expression());
+	match_token(";");
 	return temp;
 }
 
@@ -380,7 +607,7 @@ ASTNode Parser::parse_function_call_parameters_list()
 	}
 }
 
-ASTNode Parser::parse_lambda_expr()
+ASTNode Parser::parse_lambda_expression()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_LAMBDA_EXPR;
@@ -408,14 +635,30 @@ ASTNode Parser::parse_function_call()
 	else
 	{
 		match_token("(");
-		temp.children.push_back(parse_lambda_expr());
+//		temp.children.push_back(parse_lambda_expression());
+		temp.children.push_back(parse_expression());
 		match_token(")");
 		temp.children.push_back(parse_function_call_parameters_list());
 		return temp;
 	}
 }
 
-ASTNode Parser::parse_arithmetic_factor()
+ASTNode Parser::parse_variable_definition_statement()
+{
+	ASTNode temp;
+	temp.type = ASTNode::AST_VAR_DEF_EXPR;
+	match_token("var");
+	temp.children.push_back(parse_identifier());
+	if (current_token() == "=")
+	{
+		match_token("=");
+		temp.children.push_back(parse_expression());
+	}
+	match_token(";");
+	return temp;
+}
+
+ASTNode Parser::parse_factor()
 {
 	int back_up = pos;
 	try
@@ -431,7 +674,7 @@ ASTNode Parser::parse_arithmetic_factor()
 		try
 		{
 			pos = back_up;
-			return parse_lambda_expr();
+			return parse_lambda_expression();
 		}
 		catch (Exception exp2)
 		{
@@ -464,19 +707,19 @@ ASTNode Parser::parse_term()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_TERM;
-	temp.children.push_back(parse_arithmetic_factor());
+	temp.children.push_back(parse_factor());
 	while (current_token() == "*" || current_token() == "/")
 	{
 		if (current_token() == "*")
 		{
 			match_token("*");
-			temp.children.push_back(parse_arithmetic_factor());
+			temp.children.push_back(parse_factor());
 			temp.calc_flag.push_back(true);
 		}
 		else
 		{
 			match_token("/");
-			temp.children.push_back(parse_arithmetic_factor());
+			temp.children.push_back(parse_factor());
 			temp.calc_flag.push_back(false);
 		}
 	}
@@ -486,15 +729,15 @@ ASTNode Parser::parse_term()
 ASTNode Parser::parse_expression()
 {
 	int back_up = pos;
-	ASTNode temp;
-	temp.type = ASTNode::AST_EXPR;
+	
 	if (current_token().type == Token::T_IDENTIFIER && next_token() == "=")
 	{
 		pos = back_up;
-		temp.children.push_back(parse_assign_expression());
-		return temp;
+		return parse_assign_expression();
 	}
 	pos = back_up;
+	ASTNode temp;
+	temp.type = ASTNode::AST_EXPR;
 	temp.children.push_back(parse_term());
 	while (current_token() == "+" || current_token() == "-")
 	{
@@ -536,4 +779,30 @@ void test_for_parser()
 			std::cout << exp.get_message() << std::endl;
 		}
 	}
+}
+
+void test_for_evaluator()
+{
+	std::string str;
+	Scope* scope = new Scope;
+	while (true)
+	{
+		std::getline(std::cin, str);
+		Parser parser(str);
+		try
+		{
+			ASTNode ast = parser.parse_statement();
+			std::cout << to_string(ast) << std::endl;
+			std::cout << to_string(ast.eval(scope)) << std::endl;
+		}
+		catch(Exception exp)
+		{
+			std::cout << exp.get_message() << std::endl;
+		}
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	test_for_evaluator();
 }

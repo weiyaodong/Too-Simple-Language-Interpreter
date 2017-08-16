@@ -1,8 +1,12 @@
 #pragma once
 #include "Tokenizer.h"
-
+#include "Evaluator.h"
 #include <functional>
 #include <vector>
+#include <iostream>
+
+class Object;
+class Scope;
 
 class ASTNode // AST for Abstract Syntax Tree Node
 {
@@ -12,22 +16,22 @@ public:
 		AST_NUM,			// number
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
-		AST_EXPR,		// arithmetic expression
-		AST_TERM,		// arithmetic term
-		AST_ARITH_FACTOR,	// arithmetic factor
+		AST_VAR_DEF_EXPR,		// variable definition
+		AST_EXPR,			// arithmetic expression
+		AST_TERM,			// arithmetic term
+//		AST_ARITH_FACTOR,	// arithmetic factor
 		AST_ASN_EXPR,		// assignment expression
 		AST_STMTS,			// { statements }
 		AST_IF_STMT,		// if statement
 		AST_WHILE_STMT,		// while statement
 		AST_LAMBDA_EXPR,	// lambda expression
-		AST_FUN_DEF_STMT,		// function declaration expression
+		AST_FUN_DEF_STMT,	// function declaration expression
 		AST_FUN_CALL_EXPR,	// function call expression
 		AST_RET_STMT,		// return statement
 		AST_FUN_CALL_PARA_LIST, // function call parameters list
 		AST_FUN_DEF_PARA_LIST,	// function definition parameters list
 	};
 
-	// todo
 	// ReSharper disable once CppPossiblyUninitializedMember
 	ASTNode() {}
 
@@ -50,11 +54,8 @@ public:
 	std::vector<bool> calc_flag;
 	std::string name;
 	ASTNode_Type type;
-//
-//	Object evaluate(Scope scope)
-//	{
-//
-//	}
+
+	Object eval(Scope* scope);
 };
 
 template<>
@@ -91,7 +92,6 @@ public:
 	/// </summary>
 	ASTNode parse_identifier();
 
-
 	ASTNode parse_statements();
 
 	ASTNode parse_function_definition_parameters_list();
@@ -109,6 +109,7 @@ public:
 	/// BNF: \n
 	/// stmts ::= {stmt}
 	/// </summary>
+
 	ASTNode parse_statement();
 
 	/// <summary>
@@ -118,21 +119,36 @@ public:
 	/// </summary>
 	ASTNode parse_assign_expression();
 
+	/// <summary>
+	/// To parse if statement \n
+	/// BNF: \n
+	/// if_stmt ::= "if" "(" expr ")" stmt
+	/// </summary>
 	ASTNode parse_if_statement();
 
+	/// <summary>
+	/// To parse while statement \n
+	/// BNF: \n
+	/// if_stmt ::= "while" "(" expr ")" stmt
+	/// </summary>
 	ASTNode parse_while_statement();
 
+	/// <summary>
+	/// To parse return statement \n
+	/// BNF: \n
+	/// if_stmt ::= "ret" expr ";"
+	/// </summary>
 	ASTNode parse_return_statement();
-
 
 	ASTNode parse_function_call_parameters_list();
 
-	ASTNode parse_lambda_expr();
+	ASTNode parse_lambda_expression();
 
 	ASTNode parse_function_call();
 
+	ASTNode parse_variable_definition_statement();
 
-	ASTNode parse_arithmetic_factor();
+	ASTNode parse_factor();
 
 	/// <summary>
 	/// To parse arithmetic term \n
@@ -155,7 +171,4 @@ public:
 
 void test_for_parser();
 
-//int main(int argc, char* argv[])
-//{
-//	test_for_parser();
-//}
+void test_for_evaluator();

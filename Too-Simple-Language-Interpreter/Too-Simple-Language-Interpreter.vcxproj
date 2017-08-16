@@ -142,9 +142,10 @@
     <ClCompile Include="Exception.cpp" />
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="Tokenizer.cpp" />
-    <ClCompile Include="源.cpp" />
+    <ClCompile Include="Evaluator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Evaluator.h" />
     <ClInclude Include="Exception.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Tokenizer.h" />
