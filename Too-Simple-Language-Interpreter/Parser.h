@@ -20,7 +20,7 @@ public:
 		AST_TERM,			// arithmetic term
 //		AST_ARITH_FACTOR,	// arithmetic factor
 		AST_ASN_EXPR,		// assignment expression
-		AST_STMTS,			// { statements }
+		AST_BLOCK,			// { block }
 		AST_IF_STMT,		// if statement
 		AST_PRINT_STMT,		// print statement
 		AST_WHILE_STMT,		// while statement
@@ -101,7 +101,7 @@ public:
 	/// </summary>
 	ASTNode parse_identifier();
 
-	ASTNode parse_statements();
+	ASTNode parse_block();
 
 	ASTNode parse_function_definition_parameters_list();
 
@@ -114,7 +114,7 @@ public:
 	ASTNode parse_function_definition_statement();
 
 	/// <summary>
-	/// To parse several statements \n
+	/// To parse several block \n
 	/// BNF: \n
 	/// stmts ::= {stmt}
 	/// </summary>

@@ -5,6 +5,7 @@
 #include <map>
 #include "Parser.h"
 #include <memory>
+#include <iostream>
 
 class ASTNode;
 
@@ -197,6 +198,7 @@ inline Object::~Object()
 	if (type == FUNCTION)
 	{
 //		delete scope;
+//		std::cout << scope.use_count() << std::endl;
 	}
 }
 

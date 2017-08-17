@@ -15,8 +15,6 @@ Object ASTNode::eval(Scope* scope) const
 			Object temp = children[i].eval(scope);
 			if (temp.type != Object::NUMBER)
 			{
-				// todo
-				// throw Exception(to_string(temp) + " is not a Number");
 				throw Exception("Only Numbers can be calculated now");
 			}
 			num.push_back(temp.num);
@@ -136,7 +134,7 @@ Object ASTNode::eval(Scope* scope) const
 		{
 			param.push_back(children[1].children[i].eval(scope));
 		}
-		if (fun.body->type != AST_STMTS)
+		if (fun.body->type != AST_BLOCK)
 		{
 			return fun.evaluate(param);
 		}
@@ -198,7 +196,7 @@ Object ASTNode::eval(Scope* scope) const
 		std::cout << to_string(children[0].eval(scope)) << std::endl;
 		return Object();
 	}
-	if (type == AST_STMTS)
+	if (type == AST_BLOCK)
 	{
 		Object temp;
 		for (size_t i = 0; i < children.size(); i++)
@@ -310,7 +308,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return "print " + to_string(node.children[0]) + ";";
 	}
-	if (node.type == ASTNode::AST_STMTS)
+	if (node.type == ASTNode::AST_BLOCK)
 	{
 		if (node.children.size() == 0)
 		{
@@ -453,10 +451,10 @@ ASTNode Parser::parse_identifier()
 	throw Exception("Current token is not an identifier");
 }
 
-ASTNode Parser::parse_statements()
+ASTNode Parser::parse_block()
 {
 	ASTNode temp;
-	temp.type = ASTNode::AST_STMTS;
+	temp.type = ASTNode::AST_BLOCK;
 	match_token("{");
 	while (!(current_token() == "}"))
 	{
@@ -503,7 +501,7 @@ ASTNode Parser::parse_function_definition_statement()
 	temp.children.push_back(parse_identifier());
 	temp.children.push_back(parse_function_definition_parameters_list());
 	match_token("=>");
-	temp.children.push_back(parse_statements());
+	temp.children.push_back(parse_block());
 	return temp;
 }
 
@@ -511,7 +509,7 @@ ASTNode Parser::parse_statement()
 {
 	if (current_token() == "{")
 	{
-		return parse_statements();
+		return parse_block();
 	}
 	if (current_token() == "if")
 	{
@@ -634,7 +632,7 @@ ASTNode Parser::parse_lambda_expression()
 	match_token("=>");
 	if (current_token() == "{")
 	{
-		temp.children.push_back(parse_statements());
+		temp.children.push_back(parse_block());
 		return temp;
 	}
 	temp.children.push_back(parse_expression());
@@ -780,7 +778,7 @@ ASTNode Parser::parse_test(std::string str)
 {
 	str = "{" + str + "}";
 	auto parser = Parser(str);
-	return parser.parse_statements();
+	return parser.parse_block();
 }
 
 void test_for_parser()
