@@ -93,7 +93,8 @@ Object ASTNode::eval(Scope* scope) const
 	{
 		Object temp;
 		temp.type = Object::FUNCTION;
-		temp.scope = std::make_shared<Scope>(scope);
+//		temp.scope = std::make_shared<Scope>(scope);
+		temp.scope = new Scope(scope);
 		std::vector<std::string> param;
 		for (size_t i = 0; i < children[0].children.size(); i++)
 		{
@@ -107,7 +108,8 @@ Object ASTNode::eval(Scope* scope) const
 	{
 		Object* temp = new Object();
 		temp->type = Object::FUNCTION;
-		temp->scope = std::make_shared<Scope>(scope);
+//		temp->scope = std::make_shared<Scope>(scope);
+		temp->scope = new Scope(scope);
 		std::vector<std::string> param;
 		for (size_t i = 0; i < children[1].children.size(); i++)
 		{

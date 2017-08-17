@@ -1,4 +1,3 @@
-#include "Exception.h"
 #include "Evaluator.h"
 #include "Parser.h"
 
@@ -10,7 +9,7 @@ Object Object::evaluate() const
 	}
 	if (parameters.size() == 0)
 	{
-		return body->eval(scope.get());
+		return body->eval(scope);
 	}  
 	return *this; // ?
 }
@@ -69,6 +68,10 @@ std::string to_string<Object>(const Object& obj)
 
 Scope::~Scope()
 {
+	for (auto p: children)
+	{
+		delete p;
+	}
 	for (auto p: variable_table)
 	{
 		delete p.second;

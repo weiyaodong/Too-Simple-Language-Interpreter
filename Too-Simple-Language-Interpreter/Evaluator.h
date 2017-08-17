@@ -4,8 +4,7 @@
 #include <functional>
 #include <map>
 #include "Parser.h"
-#include <memory>
-#include <iostream>
+#include <set>
 
 class ASTNode;
 
@@ -23,7 +22,7 @@ public:
 	};
 
 	 
-	Object(): num(0), boo(false), body(nullptr)
+	Object(): num(0), boo(false), body(nullptr), scope(nullptr)
 	{
 		type = NOTHING;
 	}
@@ -90,7 +89,7 @@ public:
 	// function
 	const ASTNode* body;
 	std::vector<std::string> parameters;
-	std::shared_ptr<Scope> scope;
+	Scope* scope;
 
 	Object evaluate() const;
 	Object evaluate(std::vector<Object> arguments) const
@@ -110,6 +109,7 @@ std::string to_string(const Object& obj);
 class Scope
 {
 	std::map<std::string, Object*> variable_table;
+	std::set<Scope*> children;
 public:
 //	static std::map<std::string, std::function<Object(std::vector<ASTNode>, Scope)>> built_in_functions;
 //
@@ -121,13 +121,15 @@ public:
 	Scope(Scope* p = nullptr)
 	{
 		parent = p;
+		if (p != nullptr)
+		{
+			p->children.insert(this);
+		}
 	}
 
 	~Scope();
 
 	Scope* parent;
-
-	
 
 	Object* find(const std::string& name)
 	{
@@ -176,13 +178,13 @@ public:
 		throw Exception("Can't find " + name + " in current top scope");
 	}
 
-	std::shared_ptr<Scope> update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const
+	Scope* update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const
 	{
 		if (names.size() < values.size())
 		{
 			throw Exception("Too many arguments");
 		}
-		std::shared_ptr<Scope> new_scope = std::make_shared<Scope>(const_cast<Scope*>(this));
+		Scope* new_scope = new Scope(const_cast<Scope*>(this));
 		for (size_t i = 0; i < values.size(); i++)
 		{
 			new_scope->variable_table[names[i]] = values[i];
