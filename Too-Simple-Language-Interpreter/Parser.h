@@ -22,6 +22,7 @@ public:
 		AST_ASN_EXPR,		// assignment expression
 		AST_STMTS,			// { statements }
 		AST_IF_STMT,		// if statement
+		AST_PRINT_STMT,		// print statement
 		AST_WHILE_STMT,		// while statement
 		AST_LAMBDA_EXPR,	// lambda expression
 		AST_FUN_DEF_STMT,	// function declaration expression
@@ -133,6 +134,8 @@ public:
 	/// if_stmt ::= "if" "(" expr ")" stmt
 	/// </summary>
 	ASTNode parse_if_statement();
+
+	ASTNode parse_print_statement();
 
 	/// <summary>
 	/// To parse while statement \n

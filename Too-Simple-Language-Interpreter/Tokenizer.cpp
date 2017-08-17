@@ -207,7 +207,8 @@ std::string keywords[] = {
 	"if",
 	"var",
 	"fun", 
-	"ret"
+	"ret",
+	"print"
 };
 
 std::string operators[] = {

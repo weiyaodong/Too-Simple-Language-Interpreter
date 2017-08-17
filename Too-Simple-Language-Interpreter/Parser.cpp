@@ -77,7 +77,7 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_IDENT)
 	{
-		return *scope->find(name); // caution
+		return *scope->find(name); // Error here
 	}
 	if (type == AST_VAR_DEF_EXPR)
 	{
@@ -174,7 +174,7 @@ Object ASTNode::eval(Scope* scope) const
 	{
 		auto temp = children[0].eval(scope);
 		Object result;
-		while (temp.type == Object::NUMBER && temp.num == 0)
+		while (!(temp.type == Object::NUMBER && temp.num == 0))
 		{
 			try
 			{
@@ -189,8 +189,14 @@ Object ASTNode::eval(Scope* scope) const
 				// todo
 				// deal with "continue" and "break"
 			}
+			temp = children[0].eval(scope);
 		}
 		return result;
+	}
+	if (type == AST_PRINT_STMT)
+	{
+		std::cout << to_string(children[0].eval(scope)) << std::endl;
+		return Object();
 	}
 	if (type == AST_STMTS)
 	{
@@ -300,6 +306,10 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return to_string(node.children[0]) + " => " + to_string(node.children[1]);
 	}
+	if (node.type == ASTNode::AST_PRINT_STMT)
+	{
+		return "print " + to_string(node.children[0]) + ";";
+	}
 	if (node.type == ASTNode::AST_STMTS)
 	{
 		if (node.children.size() == 0)
@@ -347,7 +357,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_STMT)
 	{
-		if (node.children[0].type == ASTNode::AST_EXPR)
+		if (node.children[0].type == ASTNode::AST_EXPR || node.children[0].type == ASTNode::AST_ASN_EXPR)
 		{
 			return to_string(node.children[0]) + ";";
 		}
@@ -523,6 +533,10 @@ ASTNode Parser::parse_statement()
 	{
 		return parse_variable_definition_statement();
 	}
+	if (current_token() == "print")
+	{
+		return parse_print_statement();
+	}
 	ASTNode temp;
 	temp.type = ASTNode::AST_STMT;
 	temp.children.push_back(parse_expression());
@@ -550,6 +564,15 @@ ASTNode Parser::parse_if_statement()
 	temp.children.push_back(parse_expression());
 	match_token(")");
 	temp.children.push_back(parse_statement());
+	return temp;
+}
+
+ASTNode Parser::parse_print_statement()
+{
+	ASTNode temp;
+	temp.type = ASTNode::AST_PRINT_STMT;
+	match_token("print");
+	temp.children.push_back(parse_expression());
 	return temp;
 }
 
@@ -810,7 +833,32 @@ void test_for_evaluator()
 	}
 }
 
+void test_for_evaluator2()
+{
+	std::string str;
+	Scope* scope = new Scope;
+	std::vector<ASTNode> nodes(1000);
+	int counter = 0;
+	while (true)
+	{
+		str.clear();
+		std::cout << ">>>> ";
+		std::getline(std::cin, str);
+		Parser parser(str);
+		try
+		{
+			nodes[counter] = parser.parse_statement();
+			std::cout << to_string(nodes[counter]) << std::endl;
+			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
+		}
+		catch (Exception exp)
+		{
+			std::cout << "Error : " << exp.get_message() << std::endl;
+		}
+		counter++;
+	}
+}
 int main(int argc, char* argv[])
 {
-	test_for_evaluator();
+	test_for_evaluator2();
 }
