@@ -212,6 +212,8 @@ std::string keywords[] = {
 };
 
 std::string operators[] = {
+	"/*",
+	"*/",
 	"+",
 	"-",
 	"*",
