@@ -5,10 +5,6 @@ Object ASTNode::eval(Scope* scope) const
 {
 	if (type == AST_TERM)
 	{
-		if (children.size() == 1)
-		{
-			return children[0].eval(scope);
-		}
 		std::vector<int> num;
 		for (size_t i = 0; i < children.size(); i++)
 		{
@@ -39,10 +35,6 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_EXPR)
 	{
-		if (children.size() == 1)
-		{
-			return children[0].eval(scope);
-		}
 		std::vector<int> num;
 		for (size_t i = 0; i < children.size(); i++)
 		{
@@ -726,7 +718,8 @@ ASTNode Parser::parse_term()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_TERM;
-	temp.children.push_back(parse_factor());
+	ASTNode temp2 = parse_factor();
+	temp.children.push_back(temp2);
 	while (current_token() == "*" || current_token() == "/")
 	{
 		if (current_token() == "*")
@@ -741,6 +734,10 @@ ASTNode Parser::parse_term()
 			temp.children.push_back(parse_factor());
 			temp.calc_flag.push_back(false);
 		}
+	}
+	if (temp.children.size() == 1)
+	{
+		return temp2;
 	}
 	return temp;
 }
@@ -757,7 +754,8 @@ ASTNode Parser::parse_expression()
 	pos = back_up;
 	ASTNode temp;
 	temp.type = ASTNode::AST_EXPR;
-	temp.children.push_back(parse_term());
+	ASTNode temp2 = parse_term();
+	temp.children.push_back(temp2);
 	while (current_token() == "+" || current_token() == "-")
 	{
 		if (current_token() == "+")
@@ -772,6 +770,10 @@ ASTNode Parser::parse_expression()
 			temp.children.push_back(parse_term());
 			temp.calc_flag.push_back(false);
 		}
+	}
+	if (temp.children.size() == 1)
+	{
+		return temp2;
 	}
 	return temp;
 }
