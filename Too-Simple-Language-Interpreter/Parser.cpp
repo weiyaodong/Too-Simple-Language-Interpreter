@@ -850,7 +850,7 @@ void test_for_evaluator2()
 		try
 		{
 			nodes[counter] = parser.parse_statement();
-			std::cout << to_string(nodes[counter]) << std::endl;
+//			std::cout << to_string(nodes[counter]) << std::endl;
 			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
 		}
 		catch (Exception exp)

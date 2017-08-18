@@ -1,5 +1,13 @@
 # Too Simple Language Interpreter
 
+跑起来大概长这样：
+
+![TSLI-1](http://zjuwyd.com/files/images/TSLI/TSLI1.png)
+
+项目地址在 [这里](https://github.com/weiyaodong/Too-Simple-Language-Interpreter) 。
+
+<!-- more -->
+
 ### 我需要看这篇文章吗？
 
 这篇文章能告诉你在不考虑性能和其它很多因素的情况下如何写一个能用的玩具解释器。
@@ -30,56 +38,56 @@
 
 ```javascript
 {
-  	// define a variable named "x" and initialize it with integer 0
+	// define a variable named "x" and initialize it with integer 0
 	var x = 0;
-  
-  	// arithmetic expression can be evaluated correctly 
-  	x = (1 + 2) * (3 + 4) / 7; // x = 3
-  	
-  	// assign x as a lambda expression "() => 1"
-  	x = () => 1;
-  
-  	// lambda expression can be like this, too
-  	x = () => {
-        ret 1;
-    };
-  
-  	// evaluate the lambda expression and print it
-  	print x(); // output : 1
-  
-  	// or print the lambda expression itself
-  	print x;   // output : () => 1
-  
-  	var sum = 50;
-  	var n = 10;
-  	
-  	// while statement 
-  	while (n) {
-        sum = sum + n;
-      	n = n - 1;
-    }
-  	print sum; // output : 55
-  	
-  	// and if statement
-  	if (1) {
-        sum = sum + 1;
-    }
-  	print sum; // output : 56  	
-  
-  	// one way to define function
-  	fun add(x, y) => {
-        ret x + y;
-    }
-    
-    // function can be curried automatically
-    var add1 = add(1);
-  	print add1(1); // output : 2
-  	
-  	// or high-order function
-  	var pack = (f) => () => f;
-  	var unpack = (f) => f();  	
-  	print unpack(pack(1)); // output : 1  
-  	
+
+	// arithmetic expression can be evaluated correctly 
+	x = (1 + 2) * (3 + 4) / 7; // x = 3
+
+	// assign x as a lambda expression "() => 1"
+	x = () => 1;
+
+	// lambda expression can be like this, too
+	x = () => {
+		ret 1;
+	};
+
+	// evaluate the lambda expression and print it
+	print x(); // output : 1
+
+	// or print the lambda expression itself
+	print x;   // output : () => 1
+
+	var sum = 50;
+	var n = 10;
+
+	// while statement 
+	while (n) {
+		sum = sum + n;
+		n = n - 1;
+	}
+	print sum; // output : 55
+
+	// and if statement
+	if (1) {
+		sum = sum + 1;
+	}
+	print sum; // output : 56  	
+
+	// one way to define function
+	fun add(x, y) => {
+		ret x + y;
+	}
+
+	// function can be curried automatically
+	var add1 = add(1);
+	print add1(1); // output : 2
+
+	// or high-order function
+	var pack = (f) => () => f;
+	var unpack = (f) => f();  	
+	print unpack(pack(1)); // output : 1  
+
 }
 ```
 
@@ -174,4 +182,32 @@ function_call_parameters_list ::= "(" [expression] ")"
 
 
 
-`Parser` 负责将 // todo
+`Parser` 负责将 `Token` 转化为 `Abstract Syntax Tree` 也就是语法树。`AST` 揭示了代码的语言无关的结构，通过 `AST` 我们可以轻易地把代码从一种语言转译到另外一种语言。
+
+实际上在完成了 `Tokenizer` 之后， `Parser` 所需要做的事情仅仅是对着 `bnf` 文法一条条的写而已。
+
+
+
+而可能最为麻烦的部分可能是语法树的求值，也就是程序的运行。
+
+目前我仅仅提供了 `Integer` 和 `Function` 这两种类型。为了简便我把它们都放在了 `Object` 这一个类里来表示 `TSL` 中的一个**值**。
+
+`Integer` 本身只需要存一个整数就好，没什么麻烦的。而有一定思考难度的东西就在于 `Function` 的储存。
+
+`Function` 作为一个函数，它有它的参数 `Parameters` ，也有相应的函数体 `Body`，以及对应的词法作用域 `Scope` 。
+
+`parameters` 的类型是 `std::string`，即在函数调用时参数们需要绑定的名字  ，`body` 指向一个语法树的节点用来表示函数体 , 而 `scope` 则指向这个函数独一无二的词法作用域。
+
+先谈一下 `Scope` 的实现。一个 `Scope` 包含一张变量表，用来保存在当前定义域下定义过的变量，并有一个父节点指针，用来指向父作用域，以及一个子节点域，用来存它对应的子节点。`Scope` 需要做的仅仅是寻找一个变量，定义一个变量和修改一个变量。
+
+函数的调用需要结合当前的语境，也就是需要一个 `Scope` 来作为求值的参数。
+
+在调用时，如果是 `Partial Apply` 即应用的参数数量小于函数的期望参数数量时，我们需要返回一个新的函数，这个函数的 `body` 与当前函数一样，而需要修改的是 `parameters` 和 `scope` 。因为已经有部分参数已经绑定了相应的值，所以新的函数中我们会去掉这些参数并把它们定义在新的 `scope` 中。而如果调用时应用了所有的参数，那么我们只需要在新的 `scope` 里对 `body` 里面的语法树进行求值就可以了。
+
+关于资源管理方面的问题，因为没有实现 `Garbage Collect` , 所以我们让所有的定义的变量作为指针存在 `scope` 里，而临时函数的 `scope` 会挂在其父作用域下。
+
+
+
+对于返回语句和循环结构的控制，这里简单粗暴地使用了异常处理来抛出函数的结果以及跳出循环(todo) 。
+
+具体的实现可能会有一些细节问题，可以结合代码进行参考。
