@@ -21,63 +21,18 @@ public:
 		NOTHING
 	};
 
-	 
-	Object(): num(0), boo(false), body(nullptr), scope(nullptr)
-	{
-		type = NOTHING;
-	}
 
-	explicit Object(Object_Type t) : type(t), body(nullptr), scope(nullptr)
-	{
-		num = 0;
-		boo = false;
-	}
+	Object();
 
-	Object(const Object& obj)
-	{
-		type = obj.type;
-		if (type == NUMBER)
-		{
-			num = obj.num;
-		}
-		else if (type == BOOL)
-		{
-			boo = obj.boo;
-		}
-		else if (type == FUNCTION)
-		{
-			body = obj.body;
-			scope = obj.scope;
-			parameters = obj.parameters;
-		}
-	}
-	Object& operator = (const Object& obj)
-	{
-		type = obj.type;
-		if (type == NUMBER)
-		{
-			num = obj.num;
-		}
-		else if (type == BOOL)
-		{
-			boo = obj.boo;
-		}
-		else if (type == FUNCTION)
-		{
-			body = obj.body;
-			scope = obj.scope;
-			parameters = obj.parameters;
-		}
-		return *this;
-	}
+	explicit Object(Object_Type t);
 
-	Object(Object_Type type, int val): num(val), boo(false), type(type), body(nullptr), scope(nullptr)
-	{
-		if (type != NUMBER)
-		{
-			throw Exception("Wrong object type");
-		}
-	}
+	Object(const Object& obj);
+
+	Object& operator =(const Object& obj);
+
+	Object(Object_Type type, int val);
+
+	explicit Object(bool b);
 
 	~Object();
 
@@ -91,15 +46,12 @@ public:
 	std::vector<std::string> parameters;
 	Scope* scope;
 
+	bool operator ==(const Object& obj) const;
+
+	bool strict_equal(const Object& obj) const;
+
 	Object evaluate() const;
-	Object evaluate(std::vector<Object> arguments) const
-	{
-		if (arguments.size() > parameters.size())
-		{
-			throw Exception("Too many arguments");
-		}
-		return update(arguments).evaluate();
-	}
+	Object evaluate(std::vector<Object> arguments) const;
 	Object update(std::vector<Object> arguments) const;
 };
 
@@ -118,80 +70,21 @@ public:
 //		built_in_functions[name] = fun;
 //	}
 
-	Scope(Scope* p = nullptr)
-	{
-		parent = p;
-		if (p != nullptr)
-		{
-			p->children.insert(this);
-		}
-	}
+	Scope(Scope* p = nullptr);
 
 	~Scope();
 
 	Scope* parent;
 
-	Object* find(const std::string& name)
-	{
-		Scope* current = this;
-		while (current != nullptr)
-		{
-			if (current->variable_table.find(name) != current->variable_table.end())
-			{
-				return current->variable_table[name];
-			}
-			current = current->parent;
-		}
-		throw Exception(name + " is not found in current scope");
-	}
+	Object* find(const std::string& name);
 
-	Object* define(const std::string& name, Object* value)
-	{
-		if (variable_table.find(name) != variable_table.end())
-		{
-			throw Exception("Variable: " + name + " has been defined");
-		}
-		return variable_table[name] = value;
-	}
+	Object* define(const std::string& name, Object* value);
 
-	Object* modify(const std::string& name, Object* value)
-	{
-		Scope* current = this;
-		while (current != nullptr)
-		{
-			if (current->variable_table.find(name) != current->variable_table.end())
-			{
-				delete current->variable_table[name];
-				return current->variable_table[name] = value;
-			}
-			current = current->parent;
-		}
-		throw Exception(name + " is not found in current scope");
-	}
+	Object* modify(const std::string& name, Object* value);
 
-	Object* find_in_top(const std::string& name)
-	{
-		if (variable_table.find(name) != variable_table.end())
-		{
-			return variable_table[name];
-		}
-		throw Exception("Can't find " + name + " in current top scope");
-	}
+	Object* find_in_top(const std::string& name);
 
-	Scope* update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const
-	{
-		if (names.size() < values.size())
-		{
-			throw Exception("Too many arguments");
-		}
-		Scope* new_scope = new Scope(const_cast<Scope*>(this));
-		for (size_t i = 0; i < values.size(); i++)
-		{
-			new_scope->variable_table[names[i]] = values[i];
-		}
-		return new_scope;
-	}
-
+	Scope* update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const;
 };
 
 

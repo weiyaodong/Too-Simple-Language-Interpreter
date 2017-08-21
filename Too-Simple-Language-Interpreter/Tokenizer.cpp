@@ -177,7 +177,7 @@ std::string to_string<Token::Token_Type>(const Token::Token_Type& ttype)
 	case Token::T_CHAR: return "char";
 	case Token::T_OPERATOR: return "operator";
 	case Token::T_BRACKET: return "bracket";
-	default: throw Exception("What the fuck???");
+	default: throw Exception("to_string<TokenType> :: What the fuck???");
 	}
 }
 
@@ -202,13 +202,18 @@ std::string to_string<Token>(const Token& tok)
 }
 
 std::string keywords[] = {
-	"def", // ...
+	"for", 
+//	"true",  // todo
+//	"false", // todo
 	"while",
+	"break",
+	"continue",
 	"if",
 	"var",
 	"fun", 
 	"ret",
-	"print"
+	"print",
+	"read" // todo
 };
 
 std::string operators[] = {
@@ -219,11 +224,26 @@ std::string operators[] = {
 	"*",
 	"/",
 	"=",
+	"+=",
+	"-=",
+	"*=",
+	"/=",
+	"&&",
+	"||",
+	"==",
+	"===",
+	"!=",
+	"!==",
+	">",
+	"<",
+	">=",
+	"<=",
 	"++",
 	"=>",
 	";",
 	","
 };
+
 bool is_keyword(const std::string& str)
 {
 	for (const auto& keyword : keywords)
@@ -547,10 +567,3 @@ void test_for_tokenizer()
 		}
 	}
 }
-
-//
-//int main(int argc, char* argv[])
-//{
-//	test_for_tokenizer();
-//	return 0;
-//}

@@ -12,18 +12,27 @@ class ASTNode // AST for Abstract Syntax Tree Node
 public:
 	enum ASTNode_Type
 	{
+		AST_EMPTY,
 		AST_NUM,			// number
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
-		AST_VAR_DEF_EXPR,		// variable definition
-		AST_EXPR,			// arithmetic expression
-		AST_TERM,			// arithmetic term
-//		AST_ARITH_FACTOR,	// arithmetic factor
+		AST_VAR_DEF_EXPR,	// variable definition
+		AST_MUL_EXPR,		// multiplicative expression
+		AST_ADD_EXPR,		// additive expression
+		AST_RELAT_EXPR,		// relation expression
+		AST_EQ_EXPR,		// equality expression
+		AST_AND_EXPR,		// logic and expression
+		AST_OR_EXPR,		// logic or expression
+		AST_FACTOR,			//  factor
 		AST_ASN_EXPR,		// assignment expression
+		AST_EXPR,			// expression
 		AST_BLOCK,			// { block }
 		AST_IF_STMT,		// if statement
 		AST_PRINT_STMT,		// print statement
 		AST_WHILE_STMT,		// while statement
+		AST_FOR_STMT,		// for statement
+		AST_BREAK_STMT,		// break statement
+		AST_CONTINUE_STMT,	// continue statement
 		AST_LAMBDA_EXPR,	// lambda expression
 		AST_FUN_DEF_STMT,	// function declaration expression
 		AST_FUN_CALL_EXPR,	// function call expression
@@ -56,11 +65,13 @@ public:
 		calc_flag = ast.calc_flag;
 		name = ast.name;
 		type = ast.type;
+		oper = ast.oper;
 	}
 
 	int num;
 	std::vector<ASTNode> children;
 	std::vector<bool> calc_flag;
+	std::string oper;
 	std::string name;
 	ASTNode_Type type;
 
@@ -78,10 +89,6 @@ class Parser
 
 public:
 
-	/**
-	* \brief The default constructor of Parser class
-	* \param code the std::string format code data
-	*/
 	explicit Parser(std::string code);
 
 	Token current_token() const;
@@ -96,59 +103,28 @@ public:
 
 	ASTNode parse_number();
 
-	/// <summary>
-	/// To parse identifier \n
-	/// </summary>
 	ASTNode parse_identifier();
 
 	ASTNode parse_block();
 
 	ASTNode parse_function_definition_parameters_list();
 
-	/// <summary>
-	/// To parse function definition statement \n
-	/// \n
-	/// fun_def_stmt ::= "fun" identifier fun_def_para_list "=>" stmts
-	/// </summary>
-
 	ASTNode parse_function_definition_statement();
-
-	/// <summary>
-	/// To parse several block \n
-	/// BNF: \n
-	/// stmts ::= {stmt}
-	/// </summary>
 
 	ASTNode parse_statement();
 
-	/// <summary>
-	/// To parse assign expression \n
-	/// BNF: \n
-	/// asn_expr ::= identifier "=" expr
-	/// </summary>
 	ASTNode parse_assign_expression();
 
-	/// <summary>
-	/// To parse if statement \n
-	/// BNF: \n
-	/// if_stmt ::= "if" "(" expr ")" stmt
-	/// </summary>
 	ASTNode parse_if_statement();
 
 	ASTNode parse_print_statement();
 
-	/// <summary>
-	/// To parse while statement \n
-	/// BNF: \n
-	/// if_stmt ::= "while" "(" expr ")" stmt
-	/// </summary>
 	ASTNode parse_while_statement();
 
-	/// <summary>
-	/// To parse return statement \n
-	/// BNF: \n
-	/// if_stmt ::= "ret" expr ";"
-	/// </summary>
+	ASTNode parse_break_statement();
+
+	ASTNode parse_continue_statement();
+
 	ASTNode parse_return_statement();
 
 	ASTNode parse_function_call_parameters_list();
@@ -161,21 +137,21 @@ public:
 
 	ASTNode parse_factor();
 
-	/// <summary>
-	/// To parse arithmetic term \n
-	/// BNF: \n
-	/// term ::= factor {"*" term} \n
-	///		   | factor {"/" term}
-	/// </summary>
-	ASTNode parse_term();
+	ASTNode parse_mul_expr();
 
-	/// <summary>
-	/// To parse expression \n
-	/// BNF: \n
-	/// expr ::= asn_expr\n
-	///		   | term {"+" term}
-	/// </summary>
 	ASTNode parse_expression();
+
+	ASTNode parse_add_expr();
+
+	ASTNode parse_relat_expr();
+
+	ASTNode parse_eq_expr();
+
+	ASTNode parse_and_expr();
+
+	ASTNode parse_or_expr();
+
+	ASTNode parse_for_statement();
 
 	static ASTNode parse_test(std::string str);
 };

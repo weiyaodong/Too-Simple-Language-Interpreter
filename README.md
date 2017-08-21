@@ -14,7 +14,7 @@
 
 如果你对这方面不是一无所知，那么可能帮助不是很大。
 
-具体涉及到的知识有 词法分析， 语法分析， 语义分析 和 语法树的求值。
+具体涉及到的知识有 简单的语法分析， 语义分析 和 语法树的求值。
 
 所有的实现都很简单粗暴，目的仅仅是为了让它 work 。
 
@@ -88,6 +88,12 @@
 	var unpack = (f) => f();  	
 	print unpack(pack(1)); // output : 1  
 
+  	// update : 新增了弱类型的大小比较啥的还有 for 循环以及 break 和 continue
+  	
+  	for (var i = 1; i <= 10; i += 1) if (i == 5) break;
+  	
+  	print x; // 5
+	
 }
 ```
 
@@ -106,6 +112,7 @@ factor ::= number | "(" expr ")"
 ```
 
 事实上多一个符号优先级，就需要多一些 `bnf` 元素。为了简便，我们当前只实现了两个优先级。
+update : 新增的运算符将优先级扩展到 7 个，但在处理时只需要对 `Parser` 做小规模修改即可
 
 所以最后得到的东西大概长这个样子
 
@@ -113,7 +120,9 @@ factor ::= number | "(" expr ")"
 statement ::= expression ";"
 	| if_statement
 	| while_statement
+	| for_statement
 	| return_statement
+	| break_statement
 	| print_statement
 	| variable_definition_statement
 	| function_definition_statement
@@ -127,26 +136,44 @@ if_statement ::= "if" "(" expression ")" statement
 
 while_statement ::= "while" "(" expression ")" statement
 
+for_statement ::= "for" "(" var_def_expr ";" expression ";" expression ")"
+var_def_expr ::= "var" identifier {"=" expression}
+
 return_statement ::= "ret" expression ";"
 
 variable_definition_statement ::= "var" identifier {"=" expression} ";"
 
 function_definition_statement ::= "fun" identifier function_def_parameters_list block
 
-expression ::= term {add_op term}
-	| assign_expression
-
-add_op ::= "+" | "-"
-
-term ::= factor {mult_op factor}
-
-mult_op ::= "*" | "/"
-
 factor ::= "(" expression ")"
 	| identifier
 	| number
+	| boolean
 	| function_call_expression
 	| lambda_expression
+
+mult_expr ::= factor {mult_op factor}
+mult_op ::= "*" | "/"
+
+add_expr ::= mult_expr {add_op mult_expr}
+add_op ::= "+" | "-"
+
+relat_expr ::= add_expr (relat_op add_expr)
+relat_op ::= ">" | "<" | ">=" | "<="
+
+eq_expr ::= relat_expr (eq_op relat_expr)
+eq_op ::= "==" | "!="
+
+and_expr ::= eq_expr {and_op eq_expr}
+and_op ::= "&&"
+
+or_expr ::= and_expr {or_op and_expr}
+or_op ::= "||"
+
+asn_expr ::= ident asn_op expression
+
+expression ::= asn_expr
+	| or_expr
 
 function_call_expression ::= identifier function_call_parameters_list
 	| "(" expression ")" function_call_parameters_list
@@ -208,6 +235,6 @@ function_call_parameters_list ::= "(" [expression] ")"
 
 
 
-对于返回语句和循环结构的控制，这里简单粗暴地使用了异常处理来抛出函数的结果以及跳出循环(todo) 。
+对于返回语句和循环结构的控制，这里简单粗暴地使用了异常处理来抛出函数的结果以及跳出循环。
 
 具体的实现可能会有一些细节问题，可以结合代码进行参考。
