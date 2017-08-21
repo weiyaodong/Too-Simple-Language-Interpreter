@@ -123,6 +123,7 @@ statement ::= expression ";"
 	| for_statement
 	| return_statement
 	| break_statement
+	| continue_statement
 	| print_statement
 	| variable_definition_statement
 	| function_definition_statement
@@ -136,7 +137,7 @@ if_statement ::= "if" "(" expression ")" statement
 
 while_statement ::= "while" "(" expression ")" statement
 
-for_statement ::= "for" "(" var_def_expr ";" expression ";" expression ")"
+for_statement ::= "for" "(" var_def_expr ";" expression ";" expression ")" statement
 var_def_expr ::= "var" identifier {"=" expression}
 
 return_statement ::= "ret" expression ";"
@@ -238,3 +239,10 @@ function_call_parameters_list ::= "(" [expression] ")"
 对于返回语句和循环结构的控制，这里简单粗暴地使用了异常处理来抛出函数的结果以及跳出循环。
 
 具体的实现可能会有一些细节问题，可以结合代码进行参考。
+
+
+
+TODO:
+
+读入操作，字符和字符串，数组，固定类型的变量，常量定义，类定义，高精度整数……
+
