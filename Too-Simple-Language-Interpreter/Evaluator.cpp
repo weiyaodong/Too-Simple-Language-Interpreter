@@ -55,7 +55,7 @@ Object::Object(Object_Type type, int val): num(val), boo(false), type(type), bod
 {
 	if (type != NUMBER)
 	{
-		throw Exception("Wrong object type");
+		throw RunTimeError("Wrong object type");
 	}
 }
 
@@ -110,7 +110,7 @@ Object Object::evaluate(std::vector<Object> arguments) const
 {
 	if (arguments.size() > parameters.size())
 	{
-		throw Exception("Too many arguments");
+		throw RunTimeError("Too many arguments");
 	}
 	return update(arguments).evaluate();
 }
@@ -199,14 +199,14 @@ Object* Scope::find(const std::string& name)
 		}
 		current = current->parent;
 	}
-	throw Exception(name + " is not found in current scope");
+	throw RunTimeError(name + " is not found in current scope");
 }
 
 Object* Scope::define(const std::string& name, Object* value)
 {
 	if (variable_table.find(name) != variable_table.end())
 	{
-		throw Exception("Variable: " + name + " has been defined");
+		throw RunTimeError("Variable: " + name + " has been defined");
 	}
 	return variable_table[name] = value;
 }
@@ -223,7 +223,7 @@ Object* Scope::modify(const std::string& name, Object* value)
 		}
 		current = current->parent;
 	}
-	throw Exception(name + " is not found in current scope");
+	throw RunTimeError(name + " is not found in current scope");
 }
 
 Object* Scope::find_in_top(const std::string& name)
@@ -232,14 +232,14 @@ Object* Scope::find_in_top(const std::string& name)
 	{
 		return variable_table[name];
 	}
-	throw Exception("Can't find " + name + " in current top scope");
+	throw RunTimeError("Can't find " + name + " in current top scope");
 }
 
 Scope* Scope::update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const
 {
 	if (names.size() < values.size())
 	{
-		throw Exception("Too many arguments");
+		throw RunTimeError("Too many arguments");
 	}
 	Scope* new_scope = new Scope(const_cast<Scope*>(this));
 	for (size_t i = 0; i < values.size(); i++)

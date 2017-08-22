@@ -15,7 +15,7 @@ int to_int(const std::string str)
 	{
 		return val;
 	}
-	throw Exception("Can't convert " + str + " to int!");
+	throw TokenizeError("Can't convert " + str + " to int!");
 }
 
 Token::Token(): type(T_EMPTY), num(0)
@@ -44,7 +44,7 @@ Token::Token(Token_Type t, const std::string& s): type(t)
 		break;
 	case T_NUMBER: num = to_int(s);
 		break;
-	default: throw Exception("Empty token can't have value!");
+	default: throw TokenizeError("Empty token can't have value!");
 	}
 }
 
@@ -128,7 +128,7 @@ std::string Token::get_str() const
 {
 	switch (type)
 	{
-	case T_EMPTY: throw Exception("Empty TOKEN!");
+	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
 	case T_KEYWORD: return kword;
 	case T_BRACKET: return bkt;
 	case T_IDENTIFIER: return ident;
@@ -143,7 +143,7 @@ bool Token::operator==(const std::string& str) const
 {
 	switch (type)
 	{
-	case T_EMPTY: throw Exception("Empty TOKEN!");
+	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
 	case T_KEYWORD: return kword == str;
 	case T_BRACKET: return bkt == str;
 	case T_IDENTIFIER: return ident == str;
@@ -159,7 +159,7 @@ bool Token::operator==(const data_type& val) const
 	switch (type)
 	{
 	case T_NUMBER: return num == val;
-	case T_EMPTY: throw Exception("Empty TOKEN!");
+	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
 	default: return false;
 	}
 }
@@ -169,7 +169,7 @@ std::string to_string<Token::Token_Type>(const Token::Token_Type& ttype)
 {
 	switch (ttype)
 	{
-	case Token::T_EMPTY: throw Exception("Empty TOKEN!");
+	case Token::T_EMPTY: throw TokenizeError("Empty TOKEN!");
 	case Token::T_NUMBER: return "number";
 	case Token::T_KEYWORD: return "keyword";
 	case Token::T_IDENTIFIER: return "id";
@@ -177,7 +177,7 @@ std::string to_string<Token::Token_Type>(const Token::Token_Type& ttype)
 	case Token::T_CHAR: return "char";
 	case Token::T_OPERATOR: return "operator";
 	case Token::T_BRACKET: return "bracket";
-	default: throw Exception("to_string<TokenType> :: What the fuck???");
+	default: throw TokenizeError("to_string<TokenType> :: What the fuck???");
 	}
 }
 
@@ -323,7 +323,7 @@ void TokenStream::match_char(char c)
 	}
 	else
 	{
-		throw Exception("Expected: '" + to_string(c) + "', but got " + to_string(code[pos]));
+		throw TokenizeError("Expected: '" + to_string(c) + "', but got " + to_string(code[pos]));
 	}
 }
 
@@ -345,7 +345,7 @@ void TokenStream::match_char(const std::function<bool(char)>& fun)
 	}
 	else
 	{
-		throw Exception("Got: " + to_string(code[pos]));
+		throw TokenizeError("Got: " + to_string(code[pos]));
 	}
 }
 
@@ -383,7 +383,7 @@ Token TokenStream::parseString()
 				break;
 			case '\'': result += "\'";
 				break;
-			default: throw Exception("Unrecognized character: " + code.substr(pos - 1, 2));
+			default: throw TokenizeError("Unrecognized character: " + code.substr(pos - 1, 2));
 			}
 		}
 		else
@@ -423,7 +423,7 @@ Token TokenStream::parseChar()
 		case '\'': match_char('\'');
 			result = "\'";
 			break;
-		default: throw Exception("Unrecognized character: " + code.substr(pos - 1, 2));
+		default: throw TokenizeError("Unrecognized character: " + code.substr(pos - 1, 2));
 		}
 	}
 	else
@@ -456,7 +456,7 @@ Token TokenStream::parseOperator()
 	{
 		return cur = Token(Token::T_OPERATOR, oper);
 	}
-	throw Exception("Unrecognized operator " + oper);
+	throw TokenizeError("Unrecognized operator " + oper);
 }
 
 Token TokenStream::parseBracket()
@@ -557,7 +557,7 @@ void test_for_tokenizer()
 			}
 			std::cout << std::endl;
 		}
-		catch (Exception exp)
+		catch (const Exception& exp)
 		{
 			std::cout << exp.get_message() << std::endl;
 		}

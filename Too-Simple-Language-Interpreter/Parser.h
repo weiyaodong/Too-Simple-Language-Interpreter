@@ -14,6 +14,9 @@ public:
 	{
 		AST_EMPTY,
 		AST_NUM,			// number
+		AST_CHAR,			// character
+		AST_STRING,			// string
+		AST_ARRAY,			// array
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
 		AST_VAR_DEF_EXPR,	// variable definition

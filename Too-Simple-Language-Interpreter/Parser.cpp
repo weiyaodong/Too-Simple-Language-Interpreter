@@ -1,6 +1,19 @@
 #include "Parser.h"
 #include <iostream>
 
+template<>
+std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
+{
+	switch (type)
+	{
+	case Object::NUMBER: return "Number";
+	case Object::BOOL: return "Bool";
+	case Object::FUNCTION: return "Function";
+	case Object::NOTHING: return "Nothing";
+	default: return "What the fuck";
+	}
+}
+
 Object ASTNode::eval(Scope* scope) const
 {
 	if (type == AST_MUL_EXPR)
@@ -16,7 +29,7 @@ Object ASTNode::eval(Scope* scope) const
 			}
 			if (temp.type != Object::NUMBER)
 			{
-				throw Exception("Only Numbers can be calculated now");
+				throw TypeError(to_string(Object::NUMBER), to_string(temp.type));
 			}
 			num.push_back(temp.num);
 		}
@@ -31,7 +44,7 @@ Object ASTNode::eval(Scope* scope) const
 			{
 				if (num[i + 1] == 0)
 				{
-					throw Exception("Devide by zero");
+					throw RunTimeError("Devide by zero");
 				}
 				ans /= num[i + 1];
 			}
@@ -51,7 +64,7 @@ Object ASTNode::eval(Scope* scope) const
 			}
 			if (temp.type != Object::NUMBER)
 			{
-				throw Exception("Only Numbers can be calculated now");
+				throw TypeError(to_string(Object::NUMBER), to_string(temp.type));
 			}
 			num.push_back(temp.num);
 		}
@@ -123,11 +136,11 @@ Object ASTNode::eval(Scope* scope) const
 		Object fun = children[0].eval(scope);          
 		if (fun.type != Object::FUNCTION)
 		{
-			throw Exception(" <" + to_string(children[0]) + "> is not a function");
+			throw TypeError(to_string(Object::FUNCTION), to_string(fun.type));
 		}
 		if (children[1].children.size() > fun.parameters.size())
 		{
-			throw Exception("Too many arguments for function : " + to_string(fun));
+			throw RunTimeError("Too many arguments for function : " + to_string(fun));
 		}
 		std::vector<Object> param;
 		for (size_t i = 0; i < children[1].children.size(); i++)
@@ -171,14 +184,14 @@ Object ASTNode::eval(Scope* scope) const
 		auto temp2 = children[1].eval(scope);
 		if (temp.type != Object::NUMBER || temp2.type != Object::NUMBER)
 		{
-			throw Exception(oper + " operator must apply to two Numbers");
+			throw RunTimeError(oper + " operator must apply to two Numbers");
 		}
 		if (oper == "+=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num + temp2.num));
 		if (oper == "-=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num - temp2.num));
 		if (oper == "*=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num * temp2.num));
 		if (temp2.num == 0)
 		{
-			throw Exception("Divide by zero");
+			throw RunTimeError("Divide by zero");
 		}
 		if (oper == "/=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num / temp2.num));
 	}
@@ -192,11 +205,11 @@ Object ASTNode::eval(Scope* scope) const
 			{
 				result = children[1].eval(scope);
 			}
-			catch (Exception exp)
+			catch (const Exception& )
 			{
 				throw;
 			}
-			catch (LoopInterrupt interrupt)
+			catch (const LoopInterrupt& interrupt)
 			{
 				if (interrupt.get_flag() == 1) break;
 				if (interrupt.get_flag() == 0)
@@ -235,7 +248,7 @@ Object ASTNode::eval(Scope* scope) const
 			auto temp = children[i].eval(scope);
 			if (temp.type != Object::NUMBER && temp.type != Object::BOOL)
 			{
-				throw Exception("Eval AST_AND_EXPR Type Error : " + to_string(temp));
+				throw TypeError(to_string(Object::BOOL), to_string(temp.type));
 			}
 			if (temp.type == Object::NUMBER)
 			{
@@ -256,7 +269,7 @@ Object ASTNode::eval(Scope* scope) const
 			auto temp = children[i].eval(scope);
 			if (temp.type != Object::NUMBER && temp.type != Object::BOOL)
 			{
-				throw Exception("Eval AST_AND_EXPR Type Error : " + to_string(temp));
+				throw TypeError(to_string(Object::BOOL), to_string(temp.type));
 			}
 			if (temp.type == Object::NUMBER)
 			{
@@ -278,20 +291,20 @@ Object ASTNode::eval(Scope* scope) const
 		{
 		case Object::BOOL: a1 = temp1.boo; break;
 		case Object::NUMBER: a1 = temp1.num; break;
-		default: throw Exception("Eval AST_RELAT_EXPR Type Error : " + to_string(temp1));
+		default: throw TypeError(to_string(Object::NUMBER), to_string(temp1.type));
 		}
 		switch (temp2.type)
 		{
 		case Object::BOOL: a2 = temp2.boo; break;
 		case Object::NUMBER: a2 = temp2.num; break;
-		default: throw Exception("Eval AST_RELAT_EXPR Type Error : " + to_string(temp2));
+		default: throw TypeError(to_string(Object::NUMBER), to_string(temp2.type));
 		}
 		
 		if (oper == "<")return Object(a1 < a2);
 		if (oper == ">")return Object(a1 > a2);
 		if (oper == "<=")return Object(a1 <= a2);
 		if (oper == ">=")return Object(a1 >= a2);	
-		throw Exception("Unknown operater : " + oper);
+		throw RunTimeError("Unknown operater : " + oper);
 	}
 	if (type == AST_EQ_EXPR)
 	{
@@ -301,7 +314,7 @@ Object ASTNode::eval(Scope* scope) const
 		if (oper == "!=") return Object(!(temp1 == temp2));
 		if (oper == "===") return Object(temp1.strict_equal(temp2));
 		if (oper == "!==") return Object(!temp1.strict_equal(temp2));
-		throw Exception("Unknown operater : " + oper);
+		throw RunTimeError("Unknown operater : " + oper);
 	}
 	if (type == AST_BREAK_STMT)
 	{
@@ -322,11 +335,11 @@ Object ASTNode::eval(Scope* scope) const
 			{
 				result = children[3].eval(scope);
 			}
-			catch (Exception exp)
+			catch (const Exception&)
 			{
 				throw;
 			}
-			catch (LoopInterrupt interrupt)
+			catch (const LoopInterrupt& interrupt)
 			{
 				if (interrupt.get_flag() == 1) break;
 				if (interrupt.get_flag() == 0)
@@ -343,7 +356,7 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	else
 	{
-		throw Exception("what the fuck ?");
+		throw RunTimeError("what the fuck ?");
 	}
 }
 
@@ -598,7 +611,7 @@ void Parser::match_token(std::string str)
 		next_token();
 		return;
 	}
-	throw Exception("Can't match " + to_string(current_token()) + " with " + str);
+	throw ParseError("Can't match " + to_string(current_token()) + " with " + "'" + str + "'");
 }
 
 void Parser::match_token(Token::Token_Type type)
@@ -607,7 +620,7 @@ void Parser::match_token(Token::Token_Type type)
 	{
 		next_token();
 	}
-	throw Exception("Can't match " + to_string(current_token()) + " with type: " + to_string(type));
+	throw ParseError("Can't match " + to_string(current_token()) + " with type: " + to_string(type));
 }
 
 ASTNode Parser::parse_number()
@@ -618,7 +631,7 @@ ASTNode Parser::parse_number()
 		next_token();
 		return temp;
 	}
-	throw Exception("Current token is not a number");
+	throw ParseError("Current token is not a number");
 }
 
 ASTNode Parser::parse_identifier()
@@ -629,7 +642,7 @@ ASTNode Parser::parse_identifier()
 		next_token();
 		return temp;
 	}
-	throw Exception("Current token is not an identifier");
+	throw ParseError("Current token is not an identifier");
 }
 
 ASTNode Parser::parse_block()
@@ -670,7 +683,7 @@ ASTNode Parser::parse_function_definition_parameters_list()
 			match_token(")");
 			return temp;
 		}
-		throw Exception("Unexpected token:" + to_string(current_token()));
+		throw ParseError("Unexpected token:" + to_string(current_token()));
 	}
 }
 
@@ -754,7 +767,7 @@ ASTNode Parser::parse_assign_expression()
 	}
 	else
 	{
-		throw Exception("Expected eq_oper , get : " + current_token().oper);
+		throw ParseError("Expected eq_oper , get : " + current_token().oper);
 	}
 	temp.children.push_back(parse_expression());
 	return temp;
@@ -846,7 +859,7 @@ ASTNode Parser::parse_function_call_parameters_list()
 			match_token(")");
 			return temp;
 		}
-		throw Exception("Unexpected token:" + to_string(current_token()));
+		throw ParseError("Unexpected token:" + to_string(current_token()));
 	}
 }
 
@@ -878,7 +891,6 @@ ASTNode Parser::parse_function_call()
 	else
 	{
 		match_token("(");
-//		temp.children.push_back(parse_lambda_expression());
 		temp.children.push_back(parse_expression());
 		match_token(")");
 		temp.children.push_back(parse_function_call_parameters_list());
@@ -908,7 +920,7 @@ ASTNode Parser::parse_factor()
 	{
 		return parse_function_call();
 	}
-	catch (Exception exp)
+	catch (const ParseError& exp)
 	{
 		if (exp.get_message() == "No more tokens")
 		{
@@ -919,7 +931,7 @@ ASTNode Parser::parse_factor()
 			pos = back_up;
 			return parse_lambda_expression();
 		}
-		catch (Exception exp2)
+		catch (const ParseError exp2)
 		{
 			if (exp2.get_message() == "No more tokens")
 			{
@@ -945,7 +957,7 @@ ASTNode Parser::parse_factor()
 			}
 		}
 	}
-	throw Exception("What the fuck???");
+	throw ParseError("What the fuck???");
 }
 
 ASTNode Parser::parse_mul_expr()
@@ -1157,45 +1169,10 @@ void test_for_parser()
 		{
 			std::cout <<"Par> " + to_string(Parser::parse_test(str)) << std::endl;
 		}
-		catch (Exception exp)
+		catch (const Exception& exp)
 		{
-			std::cout << "Error:" + exp.get_message() << std::endl;
+			std::cout << exp.get_message() << std::endl;
 		}
-	}
-}
-
-void test_for_evaluator()
-{
-	std::string str;
-	Scope* scope = new Scope;
-	scope->define("true", new Object(true));
-	scope->define("false", new Object(false));
-	std::vector<ASTNode> nodes(1000);
-	int counter = 0;
-	while (true)
-	{
-		str.clear();
-		std::cout << ">>>> ";
-		std::string temp;
-		std::cin >> temp;
-		while (temp != "end")
-		{
-			str += temp+" ";
-			std::cin >> temp;
-		}
-//		std::getline(std::cin, str);
-		Parser parser(str);
-		try
-		{
-			nodes[counter] = parser.parse_statement();
-//			std::cout << "P: " << to_string(nodes[counter]) << std::endl;
-			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
-		}
-		catch(Exception exp)
-		{
-			std::cout << "Error : " << exp.get_message() << std::endl;
-		}
-		counter++;
 	}
 }
 
@@ -1209,18 +1186,18 @@ void test_for_evaluator2()
 	int counter = 0;
 	while (true)
 	{
-		str.clear();
-		std::cout << ">>>> ";
-		std::getline(std::cin, str);
-		Parser parser(str);
 		try
 		{
+			str.clear();
+			std::cout << ">>>> ";
+			std::getline(std::cin, str);
+			Parser parser(str);
 			nodes[counter] = parser.parse_statement();
 			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
 		}
-		catch (Exception exp)
+		catch (const Exception& exp)
 		{
-			std::cout << "Error : " << exp.get_message() << std::endl;
+			std::cout << exp.get_message() << std::endl;
 		}
 		counter++;
 	}
