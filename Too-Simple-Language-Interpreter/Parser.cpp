@@ -92,13 +92,16 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_VAR_DEF_EXPR)
 	{
-		if (children.size() == 1)
+		for (size_t i = 0; i < children.size(); i += 2)
 		{
-			scope->define(children[0].name, new Object());
-		}
-		if (children.size() == 2)
-		{
-			scope->define(children[0].name, new Object(children[1].eval(scope)));
+			if (children[i + 1].type == AST_EMPTY)
+			{
+				scope->define(children[i].name, new Object());
+			}
+			else
+			{
+				scope->define(children[i].name, new Object(children[i + 1].eval(scope)));
+			}
 		}
 		return Object();
 	}
@@ -224,7 +227,23 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_PRINT_STMT)
 	{
-		std::cout << to_string(children[0].eval(scope)) << std::endl;
+		std::string result = to_string(children[0].eval(scope));
+//		std::cout << to_string(children[0].eval(scope)) << std::endl;
+		for (size_t i = 1; i < children.size(); i++)
+		{
+			result += ", " + to_string(children[i].eval(scope));
+		}
+		std::cout << result << std::endl;
+		return Object();
+	}
+	if (type == AST_READ_STMT)
+	{
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			std::string str;
+			std::cin >> str;
+			scope->modify(children[0].name, new Object(Parser(str).parse_expression().eval(scope)));
+		}
 		return Object();
 	}
 	if (type == AST_BLOCK)
@@ -492,7 +511,21 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_PRINT_STMT)
 	{
-		return "print " + to_string(node.children[0]) + ";";
+		std::string result = "print " + to_string(node.children[0]);
+		for (size_t i = 1; i < node.children.size(); i++)
+		{
+			result += ", " + to_string(node.children[i]);
+		}
+		return result + ";";
+	}
+	if (node.type == ASTNode::AST_READ_STMT)
+	{
+		std::string result = "read " + to_string(node.children[0]);
+		for (size_t i = 1; i < node.children.size(); i++)
+		{
+			result += ", " + to_string(node.children[i]);
+		}
+		return result + ";";
 	}
 	if (node.type == ASTNode::AST_BLOCK)
 	{
@@ -561,11 +594,27 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_VAR_DEF_EXPR)
 	{
-		if (node.children.size() == 1)
+		std::string result = "var ";
+		if (node.children[1].type == ASTNode::AST_EMPTY)
 		{
-			return "var " + to_string(node.children[0]) + ";";
+			result += node.children[0].name;
 		}
-		return "var " + to_string(node.children[0]) + " = " + to_string(node.children[1]) + ";";
+		else
+		{
+			result += node.children[0].name + " = " + to_string(node.children[1]);
+		}
+		for (size_t i = 2; i < node.children.size(); i+=2)
+		{
+			if (node.children[i + 1].type == ASTNode::AST_EMPTY)
+			{
+				result += ", " + node.children[i].name;
+			}
+			else
+			{
+				result += ", " + node.children[i].name + " = " + to_string(node.children[i + 1]);
+			}
+		}
+		return result + ";";
 	}
 	return {};
 }
@@ -735,6 +784,10 @@ ASTNode Parser::parse_statement()
 	{
 		return parse_print_statement();
 	}
+	if (current_token() == "read")
+	{
+		return parse_read_statement();
+	}
 	if (current_token() == "for")
 	{
 		return parse_for_statement();
@@ -790,9 +843,28 @@ ASTNode Parser::parse_print_statement()
 	ASTNode temp;
 	temp.type = ASTNode::AST_PRINT_STMT;
 	match_token("print");
-	temp.children.push_back(parse_expression());
+	temp.children.push_back(parse_expression()); while (current_token() == ",")
+	{
+		match_token(",");
+		temp.children.push_back(parse_expression());
+	}
 	match_token(";");
 	return temp; 
+}
+
+ASTNode Parser::parse_read_statement()
+{
+	ASTNode temp;
+	temp.type = ASTNode::AST_READ_STMT;
+	match_token("read");
+	temp.children.push_back(parse_identifier());
+	while (current_token() == ",")
+	{
+		match_token(",");
+		temp.children.push_back(parse_identifier());
+	}
+	match_token(";");
+	return temp;
 }
 
 ASTNode Parser::parse_while_statement()
@@ -908,6 +980,24 @@ ASTNode Parser::parse_variable_definition_statement()
 	{
 		match_token("=");
 		temp.children.push_back(parse_expression());
+	}
+	else
+	{
+		temp.children.push_back(ASTNode());
+	}
+	while ((current_token() == ","))
+	{
+		match_token();
+		temp.children.push_back(parse_identifier());
+		if (current_token() == "=")
+		{
+			match_token("=");
+			temp.children.push_back(parse_expression());
+		}
+		else
+		{
+			temp.children.push_back(ASTNode());
+		}
 	}
 	match_token(";");
 	return temp;
@@ -1202,6 +1292,7 @@ void test_for_evaluator2()
 		counter++;
 	}
 }
+
 int main(int argc, char* argv[])
 {
 	test_for_evaluator2();

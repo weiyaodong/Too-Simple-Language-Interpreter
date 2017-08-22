@@ -129,7 +129,7 @@ statement ::= expression ";"
 	| function_definition_statement
 	| block
 
-print_statement ::= "print" expression ";"
+print_statement ::= "print" expression {"," expression} ";"
 
 block ::= "{" {statement} "}"
 
@@ -138,7 +138,7 @@ if_statement ::= "if" "(" expression ")" statement
 while_statement ::= "while" "(" expression ")" statement
 
 for_statement ::= "for" "(" var_def_expr ";" expression ";" expression ")" statement
-var_def_expr ::= "var" identifier {"=" expression}
+var_def_expr ::= "var" identifier ("=" expression) {"," identifier ("=" expression)}
 
 return_statement ::= "ret" expression ";"
 

@@ -128,7 +128,7 @@ std::string Token::get_str() const
 {
 	switch (type)
 	{
-	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
+	case T_EMPTY: return ("Empty TOKEN!");
 	case T_KEYWORD: return kword;
 	case T_BRACKET: return bkt;
 	case T_IDENTIFIER: return ident;
@@ -143,7 +143,7 @@ bool Token::operator==(const std::string& str) const
 {
 	switch (type)
 	{
-	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
+	case T_EMPTY: return ("Empty TOKEN!");
 	case T_KEYWORD: return kword == str;
 	case T_BRACKET: return bkt == str;
 	case T_IDENTIFIER: return ident == str;
@@ -159,7 +159,7 @@ bool Token::operator==(const data_type& val) const
 	switch (type)
 	{
 	case T_NUMBER: return num == val;
-	case T_EMPTY: throw TokenizeError("Empty TOKEN!");
+	case T_EMPTY: return ("Empty TOKEN!");
 	default: return false;
 	}
 }
@@ -169,7 +169,7 @@ std::string to_string<Token::Token_Type>(const Token::Token_Type& ttype)
 {
 	switch (ttype)
 	{
-	case Token::T_EMPTY: throw TokenizeError("Empty TOKEN!");
+	case Token::T_EMPTY: return("Empty TOKEN!");
 	case Token::T_NUMBER: return "number";
 	case Token::T_KEYWORD: return "keyword";
 	case Token::T_IDENTIFIER: return "id";

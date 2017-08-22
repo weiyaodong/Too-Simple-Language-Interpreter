@@ -14,9 +14,9 @@ public:
 	{
 		AST_EMPTY,
 		AST_NUM,			// number
-		AST_CHAR,			// character
-		AST_STRING,			// string
-		AST_ARRAY,			// array
+		AST_CHAR,			// character todo
+		AST_STRING,			// string todo
+		AST_ARRAY,			// array todo
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
 		AST_VAR_DEF_EXPR,	// variable definition
@@ -32,6 +32,7 @@ public:
 		AST_BLOCK,			// { block }
 		AST_IF_STMT,		// if statement
 		AST_PRINT_STMT,		// print statement
+		AST_READ_STMT,		// read statement
 		AST_WHILE_STMT,		// while statement
 		AST_FOR_STMT,		// for statement
 		AST_BREAK_STMT,		// break statement
@@ -45,13 +46,16 @@ public:
 	};
 
 	// ReSharper disable once CppPossiblyUninitializedMember
-	ASTNode() {}
+	ASTNode()
+	{
+		type = AST_EMPTY;
+	}
 
 	ASTNode(int val) : num(val)
 	{
 		type = AST_NUM;
 	}
-	// todo
+
 	// ReSharper disable once CppPossiblyUninitializedMember
 	ASTNode(ASTNode_Type t, std::string n) : type(t)
 	{
@@ -122,6 +126,8 @@ public:
 
 	ASTNode parse_print_statement();
 
+	ASTNode parse_read_statement();
+
 	ASTNode parse_while_statement();
 
 	ASTNode parse_break_statement();
@@ -161,4 +167,4 @@ public:
 
 void test_for_parser();
 
-void test_for_evaluator();
+void test_for_evaluator2();
