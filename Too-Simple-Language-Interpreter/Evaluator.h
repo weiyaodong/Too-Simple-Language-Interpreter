@@ -82,6 +82,8 @@ public:
 
 	Object* modify(const std::string& name, Object* value);
 
+	Object* force_define(const std::string& name, Object* value);
+
 	Object* find_in_top(const std::string& name);
 
 	Scope* update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const;

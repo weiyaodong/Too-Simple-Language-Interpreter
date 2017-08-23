@@ -143,7 +143,7 @@ bool Token::operator==(const std::string& str) const
 {
 	switch (type)
 	{
-	case T_EMPTY: return ("Empty TOKEN!");
+	case T_EMPTY: return false;
 	case T_KEYWORD: return kword == str;
 	case T_BRACKET: return bkt == str;
 	case T_IDENTIFIER: return ident == str;
@@ -159,7 +159,7 @@ bool Token::operator==(const data_type& val) const
 	switch (type)
 	{
 	case T_NUMBER: return num == val;
-	case T_EMPTY: return ("Empty TOKEN!");
+	case T_EMPTY: return false;
 	default: return false;
 	}
 }
@@ -241,7 +241,8 @@ std::string operators[] = {
 	"++",
 	"=>",
 	";",
-	","
+	",",
+	"."
 };
 
 bool is_keyword(const std::string& str)
@@ -288,7 +289,7 @@ bool is_space(char c)
 
 bool is_operator(char c)
 {
-	return oneOf("<>=!&|-+*/^;,")(c);
+	return oneOf("<>=!&|-+*/^;,.")(c);
 }
 
 bool is_bracket(char c)

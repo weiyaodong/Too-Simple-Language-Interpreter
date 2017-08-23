@@ -27,6 +27,9 @@ public:
 		AST_AND_EXPR,		// logic and expression
 		AST_OR_EXPR,		// logic or expression
 		AST_FACTOR,			//  factor
+		AST_PRI_EXPR,		// primary expression
+		AST_POST_EXPR,		// postfix expression todo
+		AST_MEM_EXPR,		// member expression
 		AST_ASN_EXPR,		// assignment expression
 		AST_EXPR,			// expression
 		AST_BLOCK,			// { block }
@@ -82,7 +85,7 @@ public:
 	std::string name;
 	ASTNode_Type type;
 
-	Object eval(Scope* scope) const;
+	Object eval(Scope* scope, const Object* current_fun) const;
 };
 
 template<>
@@ -146,6 +149,8 @@ public:
 
 	ASTNode parse_factor();
 
+	ASTNode parse_pri_expr();
+
 	ASTNode parse_mul_expr();
 
 	ASTNode parse_expression();
@@ -160,7 +165,11 @@ public:
 
 	ASTNode parse_or_expr();
 
+	ASTNode parse_postfix_expr();
+
 	ASTNode parse_for_statement();
+
+//	ASTNode parse_member_expression();
 
 	static ASTNode parse_test(std::string str);
 };

@@ -101,7 +101,7 @@ Object Object::evaluate() const
 	}
 	if (parameters.size() == 0)
 	{
-		return body->eval(scope);
+		return body->eval(scope, this);
 	}  
 	return *this; // ?
 }
@@ -224,6 +224,15 @@ Object* Scope::modify(const std::string& name, Object* value)
 		current = current->parent;
 	}
 	throw RunTimeError(name + " is not found in current scope");
+}
+
+Object* Scope::force_define(const std::string& name, Object* value)
+{
+	if (variable_table.find(name) != variable_table.end())
+	{
+		delete variable_table[name];
+	}
+	return variable_table[name] = value;
 }
 
 Object* Scope::find_in_top(const std::string& name)

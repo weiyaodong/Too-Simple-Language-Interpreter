@@ -6,6 +6,20 @@
 
 项目地址在 [这里](https://github.com/weiyaodong/Too-Simple-Language-Interpreter) 。
 
+UPDATE 1:
+
+更改了循环流程控制，添加了 `for` 循环、  `break` 和 `continue` 。
+
+UPDATE 2:
+
+更改了 `bnf` 文法，使其支持一定的后缀表达式，例如下标访问、函数连续调用、成员访问等功能。
+
+添加了指向函数自己的 `this` 指针。
+
+添加了成员访问符 `.` ，可以通过其访问函数闭包内部的变量。
+
+更改了 `asn_expr` 的文法，使之支持直接对闭包成员的修改和定义。
+
 <!-- more -->
 
 ### 我需要看这篇文章吗？
@@ -93,7 +107,22 @@
   	for (var i = 1; i <= 10; i += 1) if (i == 5) break;
   	
   	print x; // 5
+  
+	var a = () => a; // we get a function a
+	print a()()()()()()()(); // output : () => a
 	
+	// or we can write
+	a = () => this;
+	print a()()()()()()()(); // output : () => this
+	
+	a.x = 1; // we defined a new variable in a's closure
+	print a.x; // output : 1
+	
+	a = () => x; // this is the global x
+	print a(); // output : 5
+	
+	a.x = 1; // we defined a new "x" in this closure
+	print a(); // output : 1
 }
 ```
 
@@ -144,16 +173,30 @@ return_statement ::= "ret" expression ";"
 
 variable_definition_statement ::= "var" identifier {"=" expression} ";"
 
-function_definition_statement ::= "fun" identifier function_def_parameters_list block
+function_definition_s tatement ::= "fun" identifier function_def_parameters_list block
 
-factor ::= "(" expression ")"
+primary_expression ::= "(" expression ")"
 	| identifier
 	| number
 	| boolean
-	| function_call_expression
 	| lambda_expression
+	| list_expression
 
-mult_expr ::= factor {mult_op factor}
+postfix_expression ::= primary_expression
+	| function_call_expression
+	| list_visit_expression
+	| member_expression
+
+member_expression ::= postfix_expression "." identifier
+
+function_call_expression ::= postfix_expression function_call_parameters_list
+	| "(" expression ")" function_call_parameters_list
+
+list_expression ::= "[" (expression {"," expression}) "]"
+
+list_visit_expression ::=  postfix_expression "[" expression "]"
+
+mult_expr ::= postfix_expression {mult_op factor}
 mult_op ::= "*" | "/"
 
 add_expr ::= mult_expr {add_op mult_expr}
@@ -171,13 +214,10 @@ and_op ::= "&&"
 or_expr ::= and_expr {or_op and_expr}
 or_op ::= "||"
 
-asn_expr ::= ident asn_op expression
+asn_expr ::= postfix_expression asn_op expression
 
 expression ::= asn_expr
 	| or_expr
-
-function_call_expression ::= identifier function_call_parameters_list
-	| "(" expression ")" function_call_parameters_list
 
 lambda_expression ::= function_def_parameters_list "=>" statement
 
@@ -244,5 +284,5 @@ function_call_parameters_list ::= "(" [expression] ")"
 
 TODO:
 
-读入操作，字符和字符串，数组，固定类型的变量，常量定义，类定义，高精度整数……
+读入操作，字符和字符串，数组，固定类型的变量，常量定义，高精度整数……
 

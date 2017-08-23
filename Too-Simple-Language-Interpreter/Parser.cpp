@@ -14,14 +14,44 @@ std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
 	}
 }
 
-Object ASTNode::eval(Scope* scope) const
+std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
+{
+	if (ast.children[0].type == ASTNode::AST_MEM_EXPR)
+	{
+		auto temp = find_member(ast.children[0], scope);
+		auto temp2 = temp.second->find(temp.first);
+		if (temp2->type != Object::FUNCTION)
+		{
+			throw TypeError(to_string(Object::FUNCTION), to_string(temp2->type));
+		}
+		auto scope2 = temp2->scope;
+		return std::make_pair(ast.children[1].name, scope2);
+	}
+	if (ast.type == ASTNode::AST_MEM_EXPR)
+	{
+		auto temp = scope->find(ast.children[0].name);
+		if (temp->type != Object::FUNCTION)
+		{
+			throw TypeError(to_string(Object::FUNCTION), to_string(temp->type));
+		}
+		auto scope2 = temp->scope;
+		return std::make_pair(ast.children[1].name, scope2);
+	}
+	else
+	{
+		throw RunTimeError("Unrecogenized postfix expression");
+	}
+}
+
+
+Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 {
 	if (type == AST_MUL_EXPR)
 	{
 		std::vector<int> num;
 		for (size_t i = 0; i < children.size(); i++)
 		{
-			Object temp = children[i].eval(scope);
+			Object temp = children[i].eval(scope, current_fun);
 			if (temp.type == Object::BOOL)
 			{
 				num.push_back(temp.boo);
@@ -56,7 +86,7 @@ Object ASTNode::eval(Scope* scope) const
 		std::vector<int> num;
 		for (size_t i = 0; i < children.size(); i++)
 		{
-			Object temp = children[i].eval(scope);
+			Object temp = children[i].eval(scope, current_fun);
 			if (temp.type == Object::BOOL)
 			{
 				num.push_back(temp.boo);
@@ -88,6 +118,14 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_IDENT)
 	{
+		if (name == "this")
+		{
+			if (current_fun == nullptr)
+			{
+				throw RunTimeError("No function call in this scope.");
+			}
+			return *current_fun;
+		}
 		return *scope->find(name); // Error here
 	}
 	if (type == AST_VAR_DEF_EXPR)
@@ -100,7 +138,7 @@ Object ASTNode::eval(Scope* scope) const
 			}
 			else
 			{
-				scope->define(children[i].name, new Object(children[i + 1].eval(scope)));
+				scope->define(children[i].name, new Object(children[i + 1].eval(scope, current_fun)));
 			}
 		}
 		return Object();
@@ -136,7 +174,7 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_FUN_CALL_EXPR)
 	{
-		Object fun = children[0].eval(scope);          
+		Object fun = children[0].eval(scope, current_fun);
 		if (fun.type != Object::FUNCTION)
 		{
 			throw TypeError(to_string(Object::FUNCTION), to_string(fun.type));
@@ -148,7 +186,7 @@ Object ASTNode::eval(Scope* scope) const
 		std::vector<Object> param;
 		for (size_t i = 0; i < children[1].children.size(); i++)
 		{
-			param.push_back(children[1].children[i].eval(scope));
+			param.push_back(children[1].children[i].eval(scope, current_fun));
 		}
 		if (fun.body->type != AST_BLOCK)
 		{
@@ -169,44 +207,68 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_IF_STMT) // todo
 	{
-		auto temp = children[0].eval(scope);
+		auto temp = children[0].eval(scope, current_fun);
 		if (temp.type == Object::NUMBER && temp.num == 0 || temp.type == Object::BOOL && temp.boo == false)
 		{
 			return Object();
 		}
-		return children[1].eval(scope);
+		return children[1].eval(scope, current_fun);
 	}
 	if (type == AST_RET_STMT)
 	{
-		throw children[0].eval(scope);
+		throw children[0].eval(scope, current_fun);
 	}
 	if (type == AST_ASN_EXPR)
 	{
-		if (oper == "=") return *scope->modify(children[0].name, new Object(children[1].eval(scope)));
-		auto temp = *scope->find(children[0].name);
-		auto temp2 = children[1].eval(scope);
-		if (temp.type != Object::NUMBER || temp2.type != Object::NUMBER)
+		if (children[0].type == AST_IDENT)
 		{
-			throw RunTimeError(oper + " operator must apply to two Numbers");
+			if (oper == "=") return *scope->modify(children[0].name, new Object(children[1].eval(scope, current_fun)));
+			auto temp = *scope->find(children[0].name);
+			auto temp2 = children[1].eval(scope, current_fun);
+			if (temp.type != Object::NUMBER || temp2.type != Object::NUMBER)
+			{
+				throw RunTimeError(oper + " operator must apply to two Numbers");
+			}
+			if (oper == "+=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num + temp2.num));
+			if (oper == "-=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num - temp2.num));
+			if (oper == "*=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num * temp2.num));
+			if (temp2.num == 0)
+			{
+				throw RunTimeError("Divide by zero");
+			}
+			if (oper == "/=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num / temp2.num));
 		}
-		if (oper == "+=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num + temp2.num));
-		if (oper == "-=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num - temp2.num));
-		if (oper == "*=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num * temp2.num));
-		if (temp2.num == 0)
+		else
 		{
-			throw RunTimeError("Divide by zero");
+			auto temp = find_member(children[0], scope);
+			auto scope2 = temp.second;
+			std::string vname = temp.first;
+			if (oper == "=") return *scope2->force_define(vname, new Object(children[1].eval(scope, current_fun)));
+			auto temp3 = *scope2->find(vname);
+			auto temp2 = children[1].eval(scope, current_fun);
+			if (temp3.type != Object::NUMBER || temp2.type != Object::NUMBER)
+			{
+				throw RunTimeError(oper + " operator must apply to two Numbers");
+			}
+			if (oper == "+=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num + temp2.num));
+			if (oper == "-=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num - temp2.num));
+			if (oper == "*=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num * temp2.num));
+			if (temp2.num == 0)
+			{
+				throw RunTimeError("Divide by zero");
+			}
+			if (oper == "/=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num / temp2.num));
 		}
-		if (oper == "/=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num / temp2.num));
 	}
 	if (type == AST_WHILE_STMT)
 	{
-		auto temp = children[0].eval(scope);
+		auto temp = children[0].eval(scope, current_fun);
 		Object result;
 		while (!((temp.type == Object::NUMBER && temp.num == 0) || (temp.type == Object::BOOL && temp.boo == false)))
 		{
 			try
 			{
-				result = children[1].eval(scope);
+				result = children[1].eval(scope, current_fun);
 			}
 			catch (const Exception& )
 			{
@@ -217,21 +279,21 @@ Object ASTNode::eval(Scope* scope) const
 				if (interrupt.get_flag() == 1) break;
 				if (interrupt.get_flag() == 0)
 				{
-					temp = children[0].eval(scope);
+					temp = children[0].eval(scope, current_fun);
 					continue;
 				}
 			}
-			temp = children[0].eval(scope);
+			temp = children[0].eval(scope, current_fun);
 		}
 		return result;
 	}
 	if (type == AST_PRINT_STMT)
 	{
-		std::string result = to_string(children[0].eval(scope));
+		std::string result = to_string(children[0].eval(scope, current_fun));
 //		std::cout << to_string(children[0].eval(scope)) << std::endl;
 		for (size_t i = 1; i < children.size(); i++)
 		{
-			result += ", " + to_string(children[i].eval(scope));
+			result += ", " + to_string(children[i].eval(scope, current_fun));
 		}
 		std::cout << result << std::endl;
 		return Object();
@@ -242,7 +304,7 @@ Object ASTNode::eval(Scope* scope) const
 		{
 			std::string str;
 			std::cin >> str;
-			scope->modify(children[0].name, new Object(Parser(str).parse_expression().eval(scope)));
+			scope->modify(children[0].name, new Object(Parser(str).parse_expression().eval(scope, current_fun)));
 		}
 		return Object();
 	}
@@ -251,20 +313,20 @@ Object ASTNode::eval(Scope* scope) const
 		Object temp;
 		for (size_t i = 0; i < children.size(); i++)
 		{
-			temp = children[i].eval(scope);
+			temp = children[i].eval(scope, current_fun);
 		}
 		return temp;
 	}
 	if (type == AST_STMT)
 	{
-		return children[0].eval(scope);
+		return children[0].eval(scope, current_fun);
 	}
 	if (type == AST_AND_EXPR)
 	{
 		bool result = true;
 		for (size_t i = 0; i < children.size(); i++)
 		{
-			auto temp = children[i].eval(scope);
+			auto temp = children[i].eval(scope, current_fun);
 			if (temp.type != Object::NUMBER && temp.type != Object::BOOL)
 			{
 				throw TypeError(to_string(Object::BOOL), to_string(temp.type));
@@ -285,7 +347,7 @@ Object ASTNode::eval(Scope* scope) const
 		bool result = false;
 		for (size_t i = 0; i < children.size(); i++)
 		{
-			auto temp = children[i].eval(scope);
+			auto temp = children[i].eval(scope, current_fun);
 			if (temp.type != Object::NUMBER && temp.type != Object::BOOL)
 			{
 				throw TypeError(to_string(Object::BOOL), to_string(temp.type));
@@ -304,8 +366,8 @@ Object ASTNode::eval(Scope* scope) const
 	if (type == AST_RELAT_EXPR)
 	{
 		int a1, a2;
-		auto temp1 = children[0].eval(scope);
-		auto temp2 = children[1].eval(scope);
+		auto temp1 = children[0].eval(scope, current_fun);
+		auto temp2 = children[1].eval(scope, current_fun);
 		switch (temp1.type)
 		{
 		case Object::BOOL: a1 = temp1.boo; break;
@@ -327,13 +389,22 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_EQ_EXPR)
 	{
-		auto temp1 = children[0].eval(scope);
-		auto temp2 = children[1].eval(scope);
+		auto temp1 = children[0].eval(scope, current_fun);
+		auto temp2 = children[1].eval(scope, current_fun);
 		if (oper == "==") return Object(temp1 == temp2);
 		if (oper == "!=") return Object(!(temp1 == temp2));
 		if (oper == "===") return Object(temp1.strict_equal(temp2));
 		if (oper == "!==") return Object(!temp1.strict_equal(temp2));
 		throw RunTimeError("Unknown operater : " + oper);
+	}
+	if (type == AST_MEM_EXPR)
+	{
+		auto temp = children[0].eval(scope, current_fun);
+		if (temp.type != Object::FUNCTION)
+		{
+			throw TypeError(to_string(Object::FUNCTION), to_string(temp.type));
+		}
+		return *temp.scope->find(children[1].name);
 	}
 	if (type == AST_BREAK_STMT)
 	{
@@ -345,14 +416,14 @@ Object ASTNode::eval(Scope* scope) const
 	}
 	if (type == AST_FOR_STMT)
 	{
-		children[0].eval(scope);
+		children[0].eval(scope, current_fun);
 		Object result;
-		auto temp = children[1].eval(scope);
+		auto temp = children[1].eval(scope, current_fun);
 		while (!((temp.type == Object::NUMBER && temp.num == 0) || (temp.type == Object::BOOL && temp.boo == false)))
 		{
 			try
 			{
-				result = children[3].eval(scope);
+				result = children[3].eval(scope, current_fun);
 			}
 			catch (const Exception&)
 			{
@@ -363,15 +434,19 @@ Object ASTNode::eval(Scope* scope) const
 				if (interrupt.get_flag() == 1) break;
 				if (interrupt.get_flag() == 0)
 				{
-					children[2].eval(scope);
-					temp = children[1].eval(scope);
+					children[2].eval(scope, current_fun);
+					temp = children[1].eval(scope, current_fun);
 					continue;
 				}
 			}
-			children[2].eval(scope);
-			temp = children[1].eval(scope);
+			children[2].eval(scope, current_fun);
+			temp = children[1].eval(scope, current_fun);
 		}
 		return result;
+	}
+	if (type == AST_FACTOR)
+	{
+		return children[0].eval(scope, current_fun);
 	}
 	else
 	{
@@ -462,9 +537,13 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return "(" + to_string(node.children[0]) + ")";
 	}
+	if (node.type == ASTNode::AST_MEM_EXPR)
+	{
+		return to_string(node.children[0]) + "." + to_string(node.children[1]);
+	}
 	if (node.type == ASTNode::AST_FUN_CALL_EXPR)
 	{
-		if (node.children[0].type == ASTNode::AST_IDENT)
+		if (node.children[0].type != ASTNode::AST_LAMBDA_EXPR)
 		{
 			return to_string(node.children[0]) + to_string(node.children[1]);
 		}
@@ -582,11 +661,11 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_STMT)
 	{
-		if (node.children[0].type == ASTNode::AST_EXPR || node.children[0].type == ASTNode::AST_ASN_EXPR)
-		{
-			return to_string(node.children[0]) + ";";
-		}
-		return to_string(node.children[0]);
+//		if (node.children[0].type == ASTNode::AST_EXPR || node.children[0].type == ASTNode::AST_ASN_EXPR || node.type)
+//		{
+//			return to_string(node.children[0]) + ";";
+//		}
+		return to_string(node.children[0]) + ";";
 	}
 	if (node.type == ASTNode::AST_ASN_EXPR)
 	{
@@ -812,7 +891,7 @@ ASTNode Parser::parse_assign_expression()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_ASN_EXPR;
-	temp.children.push_back(parse_identifier());
+	temp.children.push_back(parse_postfix_expr());
 	if (current_token() == "=" || current_token() == "+=" || current_token() == "-=" || current_token() == "*=" || current_token() == "/=")
 	{		
 		temp.oper = current_token().oper;
@@ -1005,7 +1084,7 @@ ASTNode Parser::parse_variable_definition_statement()
 
 ASTNode Parser::parse_factor()
 {
-	int back_up = pos;
+	/*int back_up = pos;
 	try
 	{
 		return parse_function_call();
@@ -1047,14 +1126,90 @@ ASTNode Parser::parse_factor()
 			}
 		}
 	}
-	throw ParseError("What the fuck???");
+	throw ParseError("What the fuck???");*/
+	int back_up = pos;
+
+	try
+	{
+		pos = back_up;
+		return parse_lambda_expression();
+	}
+	catch (const ParseError& exp2)
+	{
+		if (exp2.get_message() == "No more tokens")
+		{
+			throw;
+		}
+		pos = back_up;
+		if (current_token().type == Token::T_NUMBER)
+		{
+			return parse_number();
+		}
+		if (current_token().type == Token::T_IDENTIFIER)
+		{
+			return parse_identifier();
+		}
+		if (current_token() == "(")
+		{
+			match_token("(");
+			ASTNode temp;
+			temp.type = ASTNode::AST_FACTOR;
+			temp.children.push_back(parse_expression());
+			match_token(")");
+			return temp;
+		}
+	}
+
+	throw ParseError("Unrecognized primary expression");
+}
+
+ASTNode Parser::parse_pri_expr()
+{
+	int back_up = pos;
+
+	try
+	{
+		pos = back_up;
+		return parse_lambda_expression();
+	}
+	catch (const ParseError& exp2)
+	{
+		if (exp2.get_message() == "No more tokens")
+		{
+			throw;
+		}
+		pos = back_up;
+		if (current_token().type == Token::T_NUMBER)
+		{
+			return parse_number();
+		}
+		if (current_token().type == Token::T_IDENTIFIER)
+		{
+			return parse_identifier();
+		}
+		if (current_token() == "(")
+		{
+			match_token("(");
+			ASTNode temp;
+			temp.type = ASTNode::AST_FACTOR;
+			temp.children.push_back(parse_expression());
+			match_token(")");
+			if (temp.children[0].type == ASTNode::AST_FACTOR)
+			{
+				return temp.children[0];
+			}			
+			return temp;
+		}		
+	}
+	
+	throw ParseError("Unrecognized primary expression");
 }
 
 ASTNode Parser::parse_mul_expr()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_MUL_EXPR;
-	ASTNode temp2 = parse_factor();
+	ASTNode temp2 = parse_postfix_expr();
 	temp.children.push_back(temp2);
 	while (current_token() == "*" || current_token() == "/")
 	{
@@ -1084,7 +1239,8 @@ ASTNode Parser::parse_expression()
 	
 	if (current_token().type == Token::T_IDENTIFIER)
 	{
-		match_token();
+//		match_token();
+		parse_postfix_expr();
 		if (current_token() == "=" || current_token() == "+=" || current_token() == "-=" || current_token() == "*=" || current_token() == "/=")
 		{
 			pos = back_up;
@@ -1192,6 +1348,32 @@ ASTNode Parser::parse_or_expr()
 	return temp;
 }
 
+ASTNode Parser::parse_postfix_expr()
+{
+	ASTNode temp = parse_pri_expr();
+	while (current_token() == "(" || current_token() == ".")
+	{
+		if (current_token() == "(")
+		{
+			ASTNode temp2;
+			temp2.type = ASTNode::AST_FUN_CALL_EXPR;
+			temp2.children.push_back(temp);
+			temp2.children.push_back(parse_function_call_parameters_list());
+			temp = temp2;
+		}
+		else if (current_token() == ".")
+		{
+			match_token();
+			ASTNode temp2;
+			temp2.type = ASTNode::AST_MEM_EXPR;
+			temp2.children.push_back(temp);
+			temp2.children.push_back(parse_identifier());
+			temp = temp2;
+		}
+	}
+	return temp;
+}
+
 ASTNode Parser::parse_for_statement()
 {
 	match_token("for");
@@ -1283,7 +1465,7 @@ void test_for_evaluator2()
 			std::getline(std::cin, str);
 			Parser parser(str);
 			nodes[counter] = parser.parse_statement();
-			std::cout << "TSL> " << to_string(nodes[counter].eval(scope)) << std::endl;
+			std::cout << "TSL> " << to_string(nodes[counter].eval(scope, nullptr)) << std::endl;
 		}
 		catch (const Exception& exp)
 		{
@@ -1296,4 +1478,5 @@ void test_for_evaluator2()
 int main(int argc, char* argv[])
 {
 	test_for_evaluator2();
+//	test_for_parser();
 }
