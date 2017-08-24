@@ -164,4 +164,24 @@ void test_for_parser();
 
 void test_for_evaluator2();
 
-void index_assert(int a, int b);
+void subscript_assert(int a, int b);
+
+class ObjectIdentity
+{
+public:
+
+	ObjectIdentity(const std::string& name, Scope* scope) : flag(false), scope(scope), name(name), obj(nullptr)
+	{
+	}
+
+	ObjectIdentity(Object* obj) : flag(true), scope(nullptr), obj(obj)
+	{
+	}
+
+	bool flag; // true for array, false for object
+	Scope* scope;
+	std::string name;
+
+	Object* obj;
+
+};

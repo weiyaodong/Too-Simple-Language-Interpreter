@@ -47,11 +47,11 @@ public:
 	std::string get_message() const override;
 };
 
-class IndexOutOfRange : public RunTimeError
+class SubscriptOutOfRange : public RunTimeError
 {
 	std::string a, b;
 public:
-	explicit IndexOutOfRange(const std::string& a, const std::string& b);
+	explicit SubscriptOutOfRange(const std::string& a, const std::string& b);
 
 	std::string get_message() const override;
 };

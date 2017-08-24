@@ -24,13 +24,15 @@ void object_type_assert(Object::Object_Type t1, Object::Object_Type t2)
 	}
 }
 
-void index_assert(int a, int b)
+void subscript_assert(int a, int b)
 {
 	if (a >= b)
 	{
-		throw IndexOutOfRange(to_string(a), to_string(b));
+		throw SubscriptOutOfRange(to_string(a), to_string(b));
 	}
 }
+
+
 
 std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
 {
@@ -59,6 +61,69 @@ std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
 	{
 		throw RunTimeError("Unrecogenized postfix expression");
 	}
+}
+
+ObjectIdentity find_object(ASTNode ast, Scope* scope, const Object* cur_fun)
+{
+	if (ast.children[0].children.empty()) // end
+	{
+		if (ast.type == ASTNode::AST_MEM_EXPR)
+		{
+			auto temp = scope->find(ast.children[0].name);
+			object_type_assert(temp->type, Object::FUNCTION);
+			return ObjectIdentity(ast.children[1].name, temp->scope);
+		}
+		if (ast.type == ASTNode::AST_VISIT_EXPR)
+		{
+			auto temp = scope->find(ast.children[0].name);
+			object_type_assert(temp->type, Object::ARRAY);
+			auto temp2 = ast.children[1].eval(scope, cur_fun);
+			object_type_assert(temp2.type, Object::NUMBER);
+			subscript_assert(temp2.num, temp->array.size());
+			return ObjectIdentity(temp->array[temp2.num]);
+		}
+	}
+	else // not end
+	{
+		auto temp = find_object(ast.children[0], scope, cur_fun);
+		if (temp.flag) // last is array and only obj is working
+		{
+			if (ast.type == ASTNode::AST_MEM_EXPR)
+			{
+				auto temp2 = *temp.obj;
+				object_type_assert(temp2.type, Object::FUNCTION);
+				return ObjectIdentity(ast.children[1].name, temp2.scope);
+			}
+			if (ast.type == ASTNode::AST_VISIT_EXPR)
+			{
+				auto temp2 = temp.obj;
+				object_type_assert(temp2->type, Object::ARRAY);
+				auto temp3 = ast.children[1].eval(scope, cur_fun);
+				object_type_assert(temp3.type, Object::NUMBER);
+				subscript_assert(temp3.num, temp2->array.size());
+				return ObjectIdentity(temp2->array[temp3.num]);
+			}
+		}
+		else // last is object and scope and name is working
+		{
+			if (ast.type == ASTNode::AST_MEM_EXPR)
+			{
+				auto temp2 = temp.scope->find(temp.name);
+				object_type_assert(temp2->type, Object::FUNCTION);
+				return ObjectIdentity(ast.children[1].name, temp2->scope);
+			}
+			if (ast.type == ASTNode::AST_VISIT_EXPR)
+			{
+				auto temp2 = temp.scope->find(temp.name);
+				object_type_assert(temp2->type, Object::ARRAY);
+				auto temp3 = ast.children[1].eval(scope, cur_fun); // calculate the subscript
+				object_type_assert(temp3.type, Object::NUMBER);
+				subscript_assert(temp3.num, temp2->array.size());
+				return ObjectIdentity(temp2->array[temp3.num]);
+			}
+		}
+	}
+	throw RunTimeError("Can't resolved the expression :" + to_string(ast));
 }
 
 
@@ -319,25 +384,67 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		else
 		{
-			// todo
-			auto temp = find_member(children[0], scope);
-			auto scope2 = temp.second;
-			std::string vname = temp.first;
-			if (oper == "=") return *scope2->force_define(vname, new Object(children[1].eval(scope, current_fun)));
-			auto temp3 = *scope2->find(vname);
-			auto temp2 = children[1].eval(scope, current_fun);
-			if (temp3.type != Object::NUMBER || temp2.type != Object::NUMBER)
+			auto temp = find_object(children[0], scope, current_fun);
+			if (!temp.flag) 
 			{
-				throw RunTimeError(oper + " operator must apply to two Numbers");
+				auto scope2 = temp.scope;
+				std::string vname = temp.name;
+				if (oper == "=") return *scope2->force_define(vname, new Object(children[1].eval(scope, current_fun)));
+				auto temp3 = *scope2->find(vname);
+				auto temp2 = children[1].eval(scope, current_fun);
+				if (temp3.type == Object::ARRAY && temp2.type == Object::ARRAY && oper == "+=")
+				{
+					for (size_t i = 0; i < temp2.array.size(); i++)
+					{
+						temp3.array.push_back(new Object(*temp2.array[i]));
+					}
+					return *scope2->modify(vname, new Object(temp3));
+				}
+				if (temp3.type != Object::NUMBER || temp2.type != Object::NUMBER)
+				{
+					throw RunTimeError(oper + " operator must apply to two Numbers");
+				}
+				if (oper == "+=") return *scope2->modify(vname, new Object(Object::NUMBER, temp3.num + temp2.num));
+				if (oper == "-=") return *scope2->modify(vname, new Object(Object::NUMBER, temp3.num - temp2.num));
+				if (oper == "*=") return *scope2->modify(vname, new Object(Object::NUMBER, temp3.num * temp2.num));
+				if (temp2.num == 0)
+				{
+					throw RunTimeError("Divide by zero");
+				}
+				if (oper == "/=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num / temp2.num));
 			}
-			if (oper == "+=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num + temp2.num));
-			if (oper == "-=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num - temp2.num));
-			if (oper == "*=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num * temp2.num));
-			if (temp2.num == 0)
+			else
 			{
-				throw RunTimeError("Divide by zero");
+				Object* cur = temp.obj;
+				
+				if (oper == "=")
+				{
+					return (*cur = children[1].eval(scope, current_fun));
+				}
+				auto temp2 = children[1].eval(scope, current_fun);
+
+				if (cur->type == Object::ARRAY && temp2.type == Object::ARRAY && oper == "+=")
+				{
+					for (size_t i = 0; i < temp2.array.size(); i++)
+					{
+						cur->array.push_back(new Object(*temp2.array[i]));
+					}
+					return *cur;
+				}
+				if (cur->type != Object::NUMBER || temp2.type != Object::NUMBER)
+				{
+					throw RunTimeError(oper + " operator must apply to two Numbers");
+				}
+				
+				if (oper == "+=") return (*cur = Object(Object::NUMBER, cur->num + temp2.num));
+				if (oper == "-=") return (*cur = Object(Object::NUMBER, cur->num - temp2.num));
+				if (oper == "*=") return (*cur = Object(Object::NUMBER, cur->num * temp2.num));
+				if (temp2.num == 0)
+				{
+					throw RunTimeError("Divide by zero");
+				}
+				if (oper == "/=") return (*cur = Object(Object::NUMBER, cur->num / temp2.num));
 			}
-			if (oper == "/=") return *scope2->force_define(vname, new Object(Object::NUMBER, temp3.num / temp2.num));
 		}
 	}
 	if (type == AST_WHILE_STMT)
@@ -539,13 +646,13 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		{
 			throw TypeError(to_string(Object::ARRAY), to_string(ary.type));
 		}
-		auto index = children[1].eval(scope, current_fun);
-		if (index.type != Object::NUMBER)
+		auto subscript = children[1].eval(scope, current_fun);
+		if (subscript.type != Object::NUMBER)
 		{
-			throw TypeError(to_string(Object::NUMBER), to_string(index.type));
+			throw TypeError(to_string(Object::NUMBER), to_string(subscript.type));
 		}
 		
-		return *ary.array[index.num]; // visit the array by index
+		return *ary.array[subscript.num]; // visit the array by subscript
 	}
 	
 	else
