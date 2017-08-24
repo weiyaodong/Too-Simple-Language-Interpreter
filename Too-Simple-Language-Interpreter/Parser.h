@@ -17,31 +17,37 @@ public:
 		AST_CHAR,			// character todo
 		AST_STRING,			// string todo
 		AST_ARRAY,			// array todo
+		
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
 		AST_VAR_DEF_EXPR,	// variable definition
 		AST_MUL_EXPR,		// multiplicative expression
 		AST_ADD_EXPR,		// additive expression
+		
 		AST_RELAT_EXPR,		// relation expression
 		AST_EQ_EXPR,		// equality expression
 		AST_AND_EXPR,		// logic and expression
 		AST_OR_EXPR,		// logic or expression
-		AST_FACTOR,			//  factor
 		AST_PRI_EXPR,		// primary expression
-		AST_POST_EXPR,		// postfix expression todo
+		
+//		AST_POST_EXPR,		// postfix expression 
 		AST_MEM_EXPR,		// member expression
+		AST_VISIT_EXPR,		// visit expression
 		AST_ASN_EXPR,		// assignment expression
 		AST_EXPR,			// expression
+		
 		AST_BLOCK,			// { block }
 		AST_IF_STMT,		// if statement
 		AST_PRINT_STMT,		// print statement
 		AST_READ_STMT,		// read statement
 		AST_WHILE_STMT,		// while statement
+		
 		AST_FOR_STMT,		// for statement
 		AST_BREAK_STMT,		// break statement
 		AST_CONTINUE_STMT,	// continue statement
 		AST_LAMBDA_EXPR,	// lambda expression
 		AST_FUN_DEF_STMT,	// function declaration expression
+		
 		AST_FUN_CALL_EXPR,	// function call expression
 		AST_RET_STMT,		// return statement
 		AST_FUN_CALL_PARA_LIST, // function call parameters list
@@ -49,34 +55,14 @@ public:
 	};
 
 	// ReSharper disable once CppPossiblyUninitializedMember
-	ASTNode()
-	{
-		type = AST_EMPTY;
-	}
+	ASTNode();
 
-	ASTNode(int val) : num(val)
-	{
-		type = AST_NUM;
-	}
+	explicit ASTNode(int val);
 
 	// ReSharper disable once CppPossiblyUninitializedMember
-	ASTNode(ASTNode_Type t, std::string n) : type(t)
-	{
-		if (type == AST_IDENT)
-		{
-			name = n;
-		}
-	}
+	ASTNode(ASTNode_Type t, std::string n);
 
-	ASTNode(const ASTNode& ast)
-	{
-		num = ast.num;
-		children = ast.children;
-		calc_flag = ast.calc_flag;
-		name = ast.name;
-		type = ast.type;
-		oper = ast.oper;
-	}
+	ASTNode(const ASTNode& ast);
 
 	int num;
 	std::vector<ASTNode> children;
@@ -147,8 +133,6 @@ public:
 
 	ASTNode parse_variable_definition_statement();
 
-	ASTNode parse_factor();
-
 	ASTNode parse_pri_expr();
 
 	ASTNode parse_mul_expr();
@@ -169,6 +153,8 @@ public:
 
 	ASTNode parse_for_statement();
 
+	ASTNode parse_array_expression();
+
 //	ASTNode parse_member_expression();
 
 	static ASTNode parse_test(std::string str);
@@ -177,3 +163,5 @@ public:
 void test_for_parser();
 
 void test_for_evaluator2();
+
+void index_assert(int a, int b);

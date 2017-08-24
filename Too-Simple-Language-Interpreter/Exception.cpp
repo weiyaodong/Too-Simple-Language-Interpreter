@@ -49,6 +49,15 @@ std::string TypeError::get_message() const
 	return "Type Error : Expected " + expected_type + " , got " + actual_type;
 }
 
+IndexOutOfRange::IndexOutOfRange(const std::string& a, const std::string& b): RunTimeError(""), a(a), b(b)
+{
+}
+
+std::string IndexOutOfRange::get_message() const
+{
+	return "Index Out Of Range : " + a + " >= " + b;
+}
+
 LoopInterrupt::LoopInterrupt(int flag) : flag(flag)
 {
 }

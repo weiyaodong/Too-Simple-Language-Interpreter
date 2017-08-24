@@ -9,8 +9,26 @@ std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
 	case Object::NUMBER: return "Number";
 	case Object::BOOL: return "Bool";
 	case Object::FUNCTION: return "Function";
+	case Object::ARRAY: return "Array";
 	case Object::NOTHING: return "Nothing";
 	default: return "What the fuck";
+	}
+}
+
+
+void object_type_assert(Object::Object_Type t1, Object::Object_Type t2)
+{
+	if (t1 != t2)
+	{
+		throw TypeError(to_string(t2), to_string(t1));
+	}
+}
+
+void index_assert(int a, int b)
+{
+	if (a >= b)
+	{
+		throw IndexOutOfRange(to_string(a), to_string(b));
 	}
 }
 
@@ -44,6 +62,34 @@ std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
 }
 
 
+ASTNode::ASTNode(): num(0)
+{
+	type = AST_EMPTY;
+}
+
+ASTNode::ASTNode(int val): num(val)
+{
+	type = AST_NUM;
+}
+
+ASTNode::ASTNode(ASTNode_Type t, std::string n): num(0), type(t)
+{
+	if (type == AST_IDENT)
+	{
+		name = n;
+	}
+}
+
+ASTNode::ASTNode(const ASTNode& ast)
+{
+	num = ast.num;
+	children = ast.children;
+	calc_flag = ast.calc_flag;
+	name = ast.name;
+	type = ast.type;
+	oper = ast.oper;
+}
+
 Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 {
 	if (type == AST_MUL_EXPR)
@@ -57,10 +103,8 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 				num.push_back(temp.boo);
 				continue;
 			}
-			if (temp.type != Object::NUMBER)
-			{
-				throw TypeError(to_string(Object::NUMBER), to_string(temp.type));
-			}
+			object_type_assert(temp.type, Object::NUMBER);
+
 			num.push_back(temp.num);
 		}
 		int ans = num[0];
@@ -84,33 +128,51 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	if (type == AST_ADD_EXPR)
 	{
 		std::vector<int> num;
-		for (size_t i = 0; i < children.size(); i++)
+		Object res = children[0].eval(scope, current_fun);
+		if (res.type == Object::ARRAY)
 		{
-			Object temp = children[i].eval(scope, current_fun);
-			if (temp.type == Object::BOOL)
+			for (size_t i = 1; i < children.size(); i++)
 			{
-				num.push_back(temp.boo);
-				continue;
+				if (!calc_flag[i - 1])
+				{
+					throw RunTimeError(" Operator - can't apply to arrays");
+				}
+				auto ary = children[i].eval(scope, current_fun);
+				for (size_t j = 0; j < ary.array.size(); j++)
+				{
+					res.array.push_back(new Object(*ary.array[j]));
+				}
 			}
-			if (temp.type != Object::NUMBER)
-			{
-				throw TypeError(to_string(Object::NUMBER), to_string(temp.type));
-			}
-			num.push_back(temp.num);
+			return res;
 		}
-		int ans = num[0];
-		for (size_t i = 0; i < children.size() - 1; i++)
+		else
 		{
-			if (calc_flag[i])
+			for (size_t i = 0; i < children.size(); i++)
 			{
-				ans += num[i + 1];
+				Object temp = children[i].eval(scope, current_fun);
+				if (temp.type == Object::BOOL)
+				{
+					num.push_back(temp.boo);
+					continue;
+				}
+				object_type_assert(temp.type, Object::NUMBER);
+
+				num.push_back(temp.num);
 			}
-			else
+			int ans = num[0];
+			for (size_t i = 0; i < children.size() - 1; i++)
 			{
-				ans -= num[i + 1];
+				if (calc_flag[i])
+				{
+					ans += num[i + 1];
+				}
+				else
+				{
+					ans -= num[i + 1];
+				}
 			}
+			return Object(Object::NUMBER, ans);
 		}
-		return Object(Object::NUMBER, ans);
 	}
 	if (type == AST_NUM)
 	{
@@ -128,6 +190,16 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		return *scope->find(name); // Error here
 	}
+	if (type == AST_ARRAY)
+	{
+		auto temp = Object();
+		temp.type = Object::ARRAY;
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			temp.array.push_back(new Object(children[i].eval(scope, current_fun)));
+		}
+		return temp;
+	}
 	if (type == AST_VAR_DEF_EXPR)
 	{
 		for (size_t i = 0; i < children.size(); i += 2)
@@ -143,6 +215,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		return Object();
 	}
+	
 	if (type == AST_LAMBDA_EXPR)
 	{
 		Object temp;
@@ -175,10 +248,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	if (type == AST_FUN_CALL_EXPR)
 	{
 		Object fun = children[0].eval(scope, current_fun);
-		if (fun.type != Object::FUNCTION)
-		{
-			throw TypeError(to_string(Object::FUNCTION), to_string(fun.type));
-		}
+		object_type_assert(fun.type, Object::FUNCTION);
 		if (children[1].children.size() > fun.parameters.size())
 		{
 			throw RunTimeError("Too many arguments for function : " + to_string(fun));
@@ -218,6 +288,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	{
 		throw children[0].eval(scope, current_fun);
 	}
+	
 	if (type == AST_ASN_EXPR)
 	{
 		if (children[0].type == AST_IDENT)
@@ -225,9 +296,17 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 			if (oper == "=") return *scope->modify(children[0].name, new Object(children[1].eval(scope, current_fun)));
 			auto temp = *scope->find(children[0].name);
 			auto temp2 = children[1].eval(scope, current_fun);
+			if (temp.type == Object::ARRAY && temp2.type == Object::ARRAY && oper == "+=") // concat two arrays
+			{
+				for (size_t i = 0; i < temp2.array.size(); i++)
+				{
+					temp.array.push_back(new Object(*temp2.array[i]));
+				}
+				return *scope->modify(children[0].name, new Object(temp));
+			}
 			if (temp.type != Object::NUMBER || temp2.type != Object::NUMBER)
 			{
-				throw RunTimeError(oper + " operator must apply to two Numbers");
+				throw RunTimeError(oper + " operator must apply to two Numbers or two Arrays");
 			}
 			if (oper == "+=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num + temp2.num));
 			if (oper == "-=") return *scope->modify(children[0].name, new Object(Object::NUMBER, temp.num - temp2.num));
@@ -240,6 +319,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		else
 		{
+			// todo
 			auto temp = find_member(children[0], scope);
 			auto scope2 = temp.second;
 			std::string vname = temp.first;
@@ -317,6 +397,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		return temp;
 	}
+	
 	if (type == AST_STMT)
 	{
 		return children[0].eval(scope, current_fun);
@@ -397,8 +478,10 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		if (oper == "!==") return Object(!temp1.strict_equal(temp2));
 		throw RunTimeError("Unknown operater : " + oper);
 	}
+	
 	if (type == AST_MEM_EXPR)
 	{
+		// array todo
 		auto temp = children[0].eval(scope, current_fun);
 		if (temp.type != Object::FUNCTION)
 		{
@@ -444,10 +527,27 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		}
 		return result;
 	}
-	if (type == AST_FACTOR)
+	if (type == AST_PRI_EXPR)
 	{
 		return children[0].eval(scope, current_fun);
 	}
+
+	if (type == AST_VISIT_EXPR)
+	{
+		auto ary = children[0].eval(scope, current_fun);
+		if (ary.type != Object::ARRAY)
+		{
+			throw TypeError(to_string(Object::ARRAY), to_string(ary.type));
+		}
+		auto index = children[1].eval(scope, current_fun);
+		if (index.type != Object::NUMBER)
+		{
+			throw TypeError(to_string(Object::NUMBER), to_string(index.type));
+		}
+		
+		return *ary.array[index.num]; // visit the array by index
+	}
+	
 	else
 	{
 		throw RunTimeError("what the fuck ?");
@@ -511,6 +611,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return to_string(node.children[0]) + " " + node.oper + " " + to_string(node.children[1]);
 	}
+	
 	if (node.type == ASTNode::AST_EQ_EXPR)
 	{
 		return to_string(node.children[0]) + " " + node.oper + " " + to_string(node.children[1]);
@@ -533,7 +634,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 		}
 		return result;
 	}
-	if (node.type == ASTNode::AST_FACTOR)
+	if (node.type == ASTNode::AST_PRI_EXPR)
 	{
 		return "(" + to_string(node.children[0]) + ")";
 	}
@@ -541,6 +642,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return to_string(node.children[0]) + "." + to_string(node.children[1]);
 	}
+	
 	if (node.type == ASTNode::AST_FUN_CALL_EXPR)
 	{
 		if (node.children[0].type != ASTNode::AST_LAMBDA_EXPR)
@@ -588,6 +690,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return to_string(node.children[0]) + " => " + to_string(node.children[1]);
 	}
+	
 	if (node.type == ASTNode::AST_PRINT_STMT)
 	{
 		std::string result = "print " + to_string(node.children[0]);
@@ -627,6 +730,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return "while (" + to_string(node.children[0]) + ")" + to_string(node.children[1]);
 	}
+	
 	if (node.type == ASTNode::AST_RET_STMT)
 	{
 		return "ret " + to_string(node.children[0]) + ";";
@@ -659,6 +763,7 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	{
 		return "continue;";
 	}
+	
 	if (node.type == ASTNode::AST_STMT)
 	{
 //		if (node.children[0].type == ASTNode::AST_EXPR || node.children[0].type == ASTNode::AST_ASN_EXPR || node.type)
@@ -694,6 +799,24 @@ std::string to_string<ASTNode>(const ASTNode& node)
 			}
 		}
 		return result + ";";
+	}
+	if (node.type == ASTNode::AST_VISIT_EXPR)
+	{
+		return to_string(node.children[0]) + "[" + to_string(node.children[1]) + "]";
+	}
+	if (node.type == ASTNode::AST_ARRAY)
+	{
+		std::string result = "[";
+		if (node.children.empty())
+		{
+			return "[]";
+		}
+		result += to_string(node.children[0]);
+		for (size_t i = 1; i < node.children.size(); i++)
+		{
+			result += ", " + to_string(node.children[i]);
+		}
+		return result + "]";
 	}
 	return {};
 }
@@ -1082,91 +1205,15 @@ ASTNode Parser::parse_variable_definition_statement()
 	return temp;
 }
 
-ASTNode Parser::parse_factor()
-{
-	/*int back_up = pos;
-	try
-	{
-		return parse_function_call();
-	}
-	catch (const ParseError& exp)
-	{
-		if (exp.get_message() == "No more tokens")
-		{
-			throw;
-		}
-		try
-		{
-			pos = back_up;
-			return parse_lambda_expression();
-		}
-		catch (const ParseError exp2)
-		{
-			if (exp2.get_message() == "No more tokens")
-			{
-				throw;
-			}
-			pos = back_up;
-			if (current_token().type == Token::T_NUMBER)
-			{
-				return parse_number();
-			}
-			if (current_token().type == Token::T_IDENTIFIER)
-			{
-				return parse_identifier();
-			}
-			if (current_token() == "(")
-			{
-				match_token("(");
-				ASTNode temp;
-				temp.type = ASTNode::AST_FACTOR;
-				temp.children.push_back(parse_expression());
-				match_token(")");
-				return temp;
-			}
-		}
-	}
-	throw ParseError("What the fuck???");*/
-	int back_up = pos;
-
-	try
-	{
-		pos = back_up;
-		return parse_lambda_expression();
-	}
-	catch (const ParseError& exp2)
-	{
-		if (exp2.get_message() == "No more tokens")
-		{
-			throw;
-		}
-		pos = back_up;
-		if (current_token().type == Token::T_NUMBER)
-		{
-			return parse_number();
-		}
-		if (current_token().type == Token::T_IDENTIFIER)
-		{
-			return parse_identifier();
-		}
-		if (current_token() == "(")
-		{
-			match_token("(");
-			ASTNode temp;
-			temp.type = ASTNode::AST_FACTOR;
-			temp.children.push_back(parse_expression());
-			match_token(")");
-			return temp;
-		}
-	}
-
-	throw ParseError("Unrecognized primary expression");
-}
-
 ASTNode Parser::parse_pri_expr()
 {
 	int back_up = pos;
 
+	if (current_token() == "[")
+	{
+		return parse_array_expression();
+	}
+
 	try
 	{
 		pos = back_up;
@@ -1191,17 +1238,13 @@ ASTNode Parser::parse_pri_expr()
 		{
 			match_token("(");
 			ASTNode temp;
-			temp.type = ASTNode::AST_FACTOR;
+			temp.type = ASTNode::AST_PRI_EXPR;
 			temp.children.push_back(parse_expression());
 			match_token(")");
-			if (temp.children[0].type == ASTNode::AST_FACTOR)
-			{
-				return temp.children[0];
-			}			
 			return temp;
-		}		
+		}
 	}
-	
+
 	throw ParseError("Unrecognized primary expression");
 }
 
@@ -1216,13 +1259,13 @@ ASTNode Parser::parse_mul_expr()
 		if (current_token() == "*")
 		{
 			match_token("*");
-			temp.children.push_back(parse_factor());
+			temp.children.push_back(parse_pri_expr());
 			temp.calc_flag.push_back(true);
 		}
 		else
 		{
 			match_token("/");
-			temp.children.push_back(parse_factor());
+			temp.children.push_back(parse_pri_expr());
 			temp.calc_flag.push_back(false);
 		}
 	}
@@ -1351,7 +1394,7 @@ ASTNode Parser::parse_or_expr()
 ASTNode Parser::parse_postfix_expr()
 {
 	ASTNode temp = parse_pri_expr();
-	while (current_token() == "(" || current_token() == ".")
+	while (current_token() == "(" || current_token() == "." || current_token() == "[")
 	{
 		if (current_token() == "(")
 		{
@@ -1368,6 +1411,16 @@ ASTNode Parser::parse_postfix_expr()
 			temp2.type = ASTNode::AST_MEM_EXPR;
 			temp2.children.push_back(temp);
 			temp2.children.push_back(parse_identifier());
+			temp = temp2;
+		}
+		else if (current_token() == "[")
+		{
+			match_token();
+			ASTNode temp2;
+			temp2.type = ASTNode::AST_VISIT_EXPR;
+			temp2.children.push_back(temp);
+			temp2.children.push_back(parse_expression());
+			match_token("]");
 			temp = temp2;
 		}
 	}
@@ -1423,6 +1476,26 @@ ASTNode Parser::parse_for_statement()
 	return temp;
 }
 
+ASTNode Parser::parse_array_expression()
+{
+	ASTNode temp;
+	temp.type = ASTNode::AST_ARRAY;
+	match_token("[");
+	if (current_token() == "]")
+	{
+		match_token();
+		return temp;
+	}
+	temp.children.push_back(parse_expression());
+	while ((current_token() == ","))
+	{
+		match_token();
+		temp.children.push_back(parse_expression());
+	}
+	match_token("]");
+	return temp;
+}
+
 ASTNode Parser::parse_test(std::string str)
 {
 	str = "{" + str + "}";
@@ -1474,6 +1547,8 @@ void test_for_evaluator2()
 		counter++;
 	}
 }
+
+
 
 int main(int argc, char* argv[])
 {

@@ -47,6 +47,15 @@ public:
 	std::string get_message() const override;
 };
 
+class IndexOutOfRange : public RunTimeError
+{
+	std::string a, b;
+public:
+	explicit IndexOutOfRange(const std::string& a, const std::string& b);
+
+	std::string get_message() const override;
+};
+
 class LoopInterrupt
 {
 	int flag;

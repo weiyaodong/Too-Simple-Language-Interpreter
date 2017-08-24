@@ -29,10 +29,25 @@ Object::Object(const Object& obj)
 		scope = obj.scope;
 		parameters = obj.parameters;
 	}
+	else if (type == ARRAY)
+	{
+		for (auto object : obj.array)
+		{
+			array.push_back(new Object(*object));
+		}
+	}
 }
 
 Object& Object::operator=(const Object& obj)
 {
+	if (type == ARRAY)
+	{
+		for (auto object : array)
+		{
+			delete object;
+		}
+		array.clear();
+	}
 	type = obj.type;
 	if (type == NUMBER)
 	{
@@ -47,6 +62,13 @@ Object& Object::operator=(const Object& obj)
 		body = obj.body;
 		scope = obj.scope;
 		parameters = obj.parameters;
+	}
+	else if (type == ARRAY)
+	{
+		for (auto object : obj.array)
+		{
+			array.push_back(new Object(*object));
+		}
 	}
 	return *this;
 }
@@ -74,8 +96,8 @@ bool Object::operator==(const Object& obj) const
 		default: return false;
 		}
 	}
-	if (type == NUMBER && obj.type == BOOL) return num == obj.boo;
-	if (obj.type == NUMBER && type == BOOL) return obj.num == boo;
+	if (type == NUMBER && obj.type == BOOL) return num == int(obj.boo);
+	if (obj.type == NUMBER && type == BOOL) return obj.num == int(boo);
 	return false;
 }
 
@@ -148,23 +170,41 @@ std::string to_string<Object>(const Object& obj)
 	{
 		return "Nothing";
 	}
-	std::string result;
-	if (obj.parameters.size() == 0)
+	if (obj.type == Object::FUNCTION)
 	{
-		result += "()";
-	}
-	else
-	{
-		result += "(" + obj.parameters[0];
-		for (size_t i = 1; i < obj.parameters.size(); i++)
+		std::string result;
+		if (obj.parameters.size() == 0)
 		{
-			result += ", " + obj.parameters[i];
+			result += "()";
 		}
-		result += ")";
+		else
+		{
+			result += "(" + obj.parameters[0];
+			for (size_t i = 1; i < obj.parameters.size(); i++)
+			{
+				result += ", " + obj.parameters[i];
+			}
+			result += ")";
+		}
+		result += " => ";
+		result += to_string(*obj.body);
+		return result;
 	}
-	result += " => ";
-	result += to_string(*obj.body);
-	return result;
+	if (obj.type == Object::ARRAY)
+	{
+		std::string result = "[";
+		if (obj.array.empty())
+		{
+			return "[]";
+		}
+		result += to_string(*obj.array[0]);
+		for (size_t i = 1; i < obj.array.size(); i++)
+		{
+			result += ", " + to_string(*obj.array[i]);
+		}
+		return result + "]";
+	}
+	throw Exception("Unexpected Object Type ....");
 }
 
 Scope::Scope(Scope* p)

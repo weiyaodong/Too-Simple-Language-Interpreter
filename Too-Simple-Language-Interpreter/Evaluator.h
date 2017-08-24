@@ -18,6 +18,7 @@ public:
 		NUMBER,
 		BOOL,
 		FUNCTION,
+		ARRAY,
 		NOTHING
 	};
 
@@ -44,6 +45,7 @@ public:
 	// function
 	const ASTNode* body;
 	std::vector<std::string> parameters;
+	std::vector<Object*> array;
 	Scope* scope;
 
 	bool operator ==(const Object& obj) const;
@@ -96,6 +98,13 @@ inline Object::~Object()
 	{
 //		delete scope;
 //		std::cout << scope.use_count() << std::endl;
+	}
+	if (type == ARRAY)
+	{
+		for (auto object : array)
+		{
+			delete object;
+		}
 	}
 }
 
