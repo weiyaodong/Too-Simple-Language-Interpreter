@@ -427,6 +427,10 @@ Token TokenStream::parseChar()
 		default: throw TokenizeError("Unrecognized character: " + code.substr(pos - 1, 2));
 		}
 	}
+	else if (cur_char() == EOF)
+	{
+		throw TokenizeError("No more tokens after \'");
+	}
 	else
 	{
 		result = to_string(cur_char());

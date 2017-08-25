@@ -20,6 +20,14 @@ UPDATE 2:
 
 更改了 `asn_expr` 的文法，使之支持直接对闭包成员的修改和定义。
 
+UPDATE 3:
+
+修改了 `bnf` 文法，支持了数组。
+
+数组字面量形式为 `[1, 2, 3]` ，可以通过下标访问 `x = [1, 2, 3] , x[0] -> 1`
+
+数组支持 `+` 号来进行拼接。可以直接通过下标修改数组成员。
+
 <!-- more -->
 
 ### 我需要看这篇文章吗？
@@ -123,6 +131,13 @@ UPDATE 2:
 	
 	a.x = 1; // we defined a new "x" in this closure
 	print a(); // output : 1
+  
+	x = [1, 2, 3];
+	print x; // output : [1, 2, 3]
+	print x[1]; // output : 2
+	
+	x = [1, () => 2, 3]; // members of an array don't need to be the same type
+	print x[1](); // output : 2
 }
 ```
 
@@ -275,8 +290,8 @@ function_call_parameters_list ::= "(" [expression] ")"
 关于资源管理方面的问题，因为没有实现 `Garbage Collect` , 所以我们让所有的定义的变量作为指针存在 `scope` 里，而临时函数的 `scope` 会挂在其父作用域下。
 
 
+对于返回语句和循环结构的控制，这里使用了异常来处理返回函数的结果以及跳出循环等流程控制。
 
-对于返回语句和循环结构的控制，这里简单粗暴地使用了异常处理来抛出函数的结果以及跳出循环。
 
 具体的实现可能会有一些细节问题，可以结合代码进行参考。
 
@@ -284,5 +299,5 @@ function_call_parameters_list ::= "(" [expression] ")"
 
 TODO:
 
-读入操作，字符和字符串，数组，固定类型的变量，常量定义，高精度整数……
+读入操作，字符和字符串,固定类型的变量，常量定义，高精度整数……
 

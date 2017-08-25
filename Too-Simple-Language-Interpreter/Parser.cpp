@@ -123,7 +123,7 @@ ObjectIdentity find_object(ASTNode ast, Scope* scope, const Object* cur_fun)
 			}
 		}
 	}
-	throw RunTimeError("Can't resolved the expression :" + to_string(ast));
+	throw RunTimeError("Can't resolved the expression as lvalue :" + to_string(ast));
 }
 
 
@@ -590,10 +590,20 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	{
 		// array todo
 		auto temp = children[0].eval(scope, current_fun);
-		if (temp.type != Object::FUNCTION)
+		if (children[1].type != AST_IDENT)
 		{
-			throw TypeError(to_string(Object::FUNCTION), to_string(temp.type));
+			throw RunTimeError("Unrecognized member " + to_string(children[1]));
 		}
+		if (temp.type == Object::ARRAY)
+		{			
+			auto temp2 = children[1].name;
+			if (temp2 == "length")
+			{
+				return Object(Object::NUMBER, temp.array.size());
+			}
+			throw RunTimeError("Unrecognized array method " + temp2);
+		}
+		object_type_assert(temp.type, Object::FUNCTION);
 		return *temp.scope->find(children[1].name);
 	}
 	if (type == AST_BREAK_STMT)
@@ -642,16 +652,10 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	if (type == AST_VISIT_EXPR)
 	{
 		auto ary = children[0].eval(scope, current_fun);
-		if (ary.type != Object::ARRAY)
-		{
-			throw TypeError(to_string(Object::ARRAY), to_string(ary.type));
-		}
+		object_type_assert(ary.type, Object::ARRAY);
 		auto subscript = children[1].eval(scope, current_fun);
-		if (subscript.type != Object::NUMBER)
-		{
-			throw TypeError(to_string(Object::NUMBER), to_string(subscript.type));
-		}
-		
+		object_type_assert(subscript.type, Object::NUMBER);
+		subscript_assert(subscript.num, ary.array.size());
 		return *ary.array[subscript.num]; // visit the array by subscript
 	}
 	

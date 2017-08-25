@@ -155,8 +155,6 @@ public:
 
 	ASTNode parse_array_expression();
 
-//	ASTNode parse_member_expression();
-
 	static ASTNode parse_test(std::string str);
 };
 
