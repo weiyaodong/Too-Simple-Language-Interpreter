@@ -78,6 +78,11 @@ public:
 
 	Scope* parent;
 
+	std::map<std::string, Object*>& get_map()
+	{
+		return variable_table;
+	}
+
 	Object* find(const std::string& name);
 
 	Object* define(const std::string& name, Object* value);

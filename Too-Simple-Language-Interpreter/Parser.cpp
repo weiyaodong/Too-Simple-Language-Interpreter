@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include <iostream>
+#include <fstream>
 
 template<>
 std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
@@ -57,6 +58,7 @@ std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
 		auto scope2 = temp->scope;
 		return std::make_pair(ast.children[1].name, scope2);
 	}
+
 	else
 	{
 		throw RunTimeError("Unrecogenized postfix expression");
@@ -65,7 +67,14 @@ std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
 
 ObjectIdentity find_object(ASTNode ast, Scope* scope, const Object* cur_fun)
 {
-	if (ast.children[0].children.empty()) // end
+	if (ast.children.empty())
+	{
+		if (ast.type == ASTNode::AST_IDENT)
+		{
+			return ObjectIdentity(scope->find(ast.name));
+		}
+	}
+	else if (ast.children[0].children.empty()) // end
 	{
 		if (ast.type == ASTNode::AST_MEM_EXPR)
 		{
@@ -312,9 +321,30 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	}
 	if (type == AST_FUN_CALL_EXPR)
 	{
-		Object fun = children[0].eval(scope, current_fun);
-		object_type_assert(fun.type, Object::FUNCTION);
-		if (children[1].children.size() > fun.parameters.size())
+		Object* fun;
+		if (children[0].type == AST_IDENT || children[0].type == AST_MEM_EXPR || children[0].type == AST_VISIT_EXPR)
+		{
+			auto temp = find_object(children[0], scope, current_fun);
+			
+			if (temp.flag) // function in array
+			{
+				object_type_assert(temp.obj->type, Object::FUNCTION);
+				fun = temp.obj;
+			}
+			else
+			{
+				fun = temp.scope->find(temp.name);
+				object_type_assert(fun->type, Object::FUNCTION);
+			}
+		}
+		else 
+		{
+			// ReSharper disable once CppMsExtAddressOfClassRValue
+			fun = &children[0].eval(scope, current_fun);
+			object_type_assert(fun->type, Object::FUNCTION);
+		}
+		object_type_assert(fun->type, Object::FUNCTION);
+		if (children[1].children.size() > fun->parameters.size())
 		{
 			throw RunTimeError("Too many arguments for function : " + to_string(fun));
 		}
@@ -323,13 +353,13 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		{
 			param.push_back(children[1].children[i].eval(scope, current_fun));
 		}
-		if (fun.body->type != AST_BLOCK)
+		if (fun->body->type != AST_BLOCK)
 		{
-			return fun.evaluate(param);
+			return fun->evaluate(param);
 		}
 		try
 		{
-			return fun.evaluate(param);
+			return fun->evaluate(param);
 		}
 		catch (const Object& obj)
 		{
@@ -340,14 +370,18 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 			throw;
 		}
 	}
-	if (type == AST_IF_STMT) // todo
+	if (type == AST_IF_STMT)
 	{
 		auto temp = children[0].eval(scope, current_fun);
-		if (temp.type == Object::NUMBER && temp.num == 0 || temp.type == Object::BOOL && temp.boo == false)
+		if (!(temp.type == Object::NUMBER && temp.num == 0 || temp.type == Object::BOOL && temp.boo == false))
 		{
-			return Object();
+			return children[1].eval(scope, current_fun);
 		}
-		return children[1].eval(scope, current_fun);
+		if (children.size() == 3)
+		{
+			return children[2].eval(scope, current_fun);
+		}
+		return Object();
 	}
 	if (type == AST_RET_STMT)
 	{
@@ -835,7 +869,14 @@ std::string to_string<ASTNode>(const ASTNode& node)
 	}
 	if (node.type == ASTNode::AST_IF_STMT)
 	{
-		return "if (" + to_string(node.children[0]) + ")" + to_string(node.children[1]);
+		if (node.children.size() == 2)
+		{
+			return "if (" + to_string(node.children[0]) + ")" + to_string(node.children[1]);
+		}
+		else
+		{
+			return "if (" + to_string(node.children[0]) + ")" + to_string(node.children[1]) + "\nelse " + to_string(node.children[2]);
+		}
 	}
 	if (node.type == ASTNode::AST_WHILE_STMT)
 	{
@@ -1148,6 +1189,11 @@ ASTNode Parser::parse_if_statement()
 	temp.children.push_back(parse_expression());
 	match_token(")");
 	temp.children.push_back(parse_statement());
+	if (current_token() == "else")
+	{
+		match_token();
+		temp.children.push_back(parse_statement());
+	}
 	return temp;
 }
 
@@ -1638,6 +1684,7 @@ void test_for_evaluator2()
 	Scope* scope = new Scope;
 	scope->define("true", new Object(true));
 	scope->define("false", new Object(false));
+	scope->define("null", new Object());
 	std::vector<ASTNode> nodes(1000);
 	int counter = 0;
 	while (true)
@@ -1647,22 +1694,67 @@ void test_for_evaluator2()
 			str.clear();
 			std::cout << ">>>> ";
 			std::getline(std::cin, str);
-			Parser parser(str);
-			nodes[counter] = parser.parse_statement();
-			std::cout << "TSL> " << to_string(nodes[counter].eval(scope, nullptr)) << std::endl;
+			if (str[0] == ':')
+			{
+				if (str[1] == 'l')
+				{					
+					std::string filename = str.substr(3, str.length() - 3);
+					std::ifstream in(filename);
+					std::string base;
+					std::string temp;
+					while (std::getline(in, temp))
+					{
+						base += temp;
+					}
+					str = "{" + base + "}";
+					try {
+						Parser parser(str);
+						nodes[counter] = parser.parse_statement();
+						nodes[counter].eval(scope, nullptr);
+						std::cout << "Load " + filename + " successful!" << std::endl;
+					}
+					catch (const Exception& exp)
+					{
+						std::cout << exp.get_message() << std::endl;
+					}
+				}
+				else if (str[1] == 'q')
+				{
+					delete scope;
+					std::cout << "Quit Successful" << std::endl;
+					return;
+				}
+				else if (str[1] == 's')
+				{
+					std::cout << "Names in global scope : " << std::endl;
+					for (auto var : scope->get_map())
+					{
+						std::cout << var.first << std::endl;
+					}
+				}
+			}
+			else 
+			{
+				Parser parser(str);
+				nodes[counter] = parser.parse_statement();
+				std::cout << "TSL> " << to_string(nodes[counter].eval(scope, nullptr)) << std::endl;
+			}
 		}
 		catch (const Exception& exp)
 		{
 			std::cout << exp.get_message() << std::endl;
 		}
+		catch (const std::exception& exp)
+		{
+			std::cout << "std::exception : " << exp.what() << std::endl;
+		}
 		counter++;
 	}
 }
 
-
-
 int main(int argc, char* argv[])
 {
+
 	test_for_evaluator2();
 //	test_for_parser();
 }

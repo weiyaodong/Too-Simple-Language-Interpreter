@@ -1,0 +1,22 @@
+var zero = (f, x) => x;
+
+var succ = (n) => (f, x) => f(n(f, x));
+
+var toi = (n) => n((x) => x + 1, 0);
+
+var one = succ(zero);
+var two = succ(one);
+var three = succ(two);
+var four = succ(three);
+
+var add = (n, m) => (f, x) => n(f, m(f, x));
+var mul = (n, m) => (f, x) => n(m(f), x);
+var pow = (n, m) => (f, x) => m(n, f)(x);
+
+var const = (x, y) => x;
+var id = (x) => x;
+
+var pred = (n) => (f, x) => n((g) => (h) => h(g(f)), const(x))(id);
+var sub = (n, m) => m(pred, n);
+
+var iszero = (n) => n(const(false), true);

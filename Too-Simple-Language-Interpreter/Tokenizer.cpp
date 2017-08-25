@@ -203,12 +203,11 @@ std::string to_string<Token>(const Token& tok)
 
 std::string keywords[] = {
 	"for", 
-//	"true",  // todo
-//	"false", // todo
 	"while",
 	"break",
 	"continue",
 	"if",
+	"else",
 	"var",
 	"fun", 
 	"ret",

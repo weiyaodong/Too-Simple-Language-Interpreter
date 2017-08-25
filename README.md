@@ -28,6 +28,16 @@ UPDATE 3:
 
 数组支持 `+` 号来进行拼接。可以直接通过下标修改数组成员。
 
+UPDATE 4:
+
+添加了 `else` 语句
+
+修改了函数调用的求值逻辑，使左值能够直接进行运算，并使成员函数得以正常工作，现在基本已经可以实现很多数据结构了。
+
+添加了 `repl` 中的 `load` `show` `quit` 指令，分别用以运行一个文件、打印出一个作用域内所有的变量、退出。
+
+
+
 <!-- more -->
 
 ### 我需要看这篇文章吗？
@@ -177,7 +187,8 @@ print_statement ::= "print" expression {"," expression} ";"
 
 block ::= "{" {statement} "}"
 
-if_statement ::= "if" "(" expression ")" statement
+if_statement ::= "if" "(" expression ")" statement (else_statement)
+else_statment ::= "else" statement
 
 while_statement ::= "while" "(" expression ")" statement
 
@@ -243,8 +254,6 @@ function_call_parameters_list ::= "(" [expression] ")"
 	| "(" expression {"," expression} ")"
 ```
 
-这个文法是有一定的问题的，它不能实现像 `fun()()()` 这样的连续调用而必须 `(((fun())()))()` 这样加上括号。(// todo)
-
 ### 这个玩具解释器是怎么实现的
 
 我们将整个过程分为 3 个部分，`Tokenize` , `Parse` , `Evaluate` .
@@ -289,15 +298,9 @@ function_call_parameters_list ::= "(" [expression] ")"
 
 关于资源管理方面的问题，因为没有实现 `Garbage Collect` , 所以我们让所有的定义的变量作为指针存在 `scope` 里，而临时函数的 `scope` 会挂在其父作用域下。
 
-
 对于返回语句和循环结构的控制，这里使用了异常来处理返回函数的结果以及跳出循环等流程控制。
 
 
 具体的实现可能会有一些细节问题，可以结合代码进行参考。
 
-
-
-TODO:
-
-读入操作，字符和字符串,固定类型的变量，常量定义，高精度整数……
-
+// 在处理左值和右值的情况时处理的想当丑陋，可能需要重构。

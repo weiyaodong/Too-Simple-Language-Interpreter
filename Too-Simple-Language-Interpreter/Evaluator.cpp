@@ -91,8 +91,22 @@ bool Object::operator==(const Object& obj) const
 	{
 		switch (type)
 		{
+		case NOTHING: return true;
 		case NUMBER: return num == obj.num;
 		case BOOL: return boo == obj.boo;
+		case ARRAY: 
+			if (array.size() != obj.array.size())
+			{
+				return false;
+			}
+			for (size_t i = 0; i < array.size(); i++)
+			{
+				if (!(*array[i] == *obj.array[i]))
+				{
+					return false;
+				}
+			}
+			return true;
 		default: return false;
 		}
 	}
@@ -109,6 +123,19 @@ bool Object::strict_equal(const Object& obj) const
 		{
 		case NUMBER: return num == obj.num;
 		case BOOL: return boo == obj.boo;
+		case ARRAY:
+			if (array.size() != obj.array.size())
+			{
+				return false;
+			}
+			for (size_t i = 0; i < array.size(); i++)
+			{
+				if (!(array[i]->strict_equal(*obj.array[i])))
+				{
+					return false;
+				}
+			}
+			return true;
 		default: return false;
 		}
 	}
@@ -246,7 +273,8 @@ Object* Scope::define(const std::string& name, Object* value)
 {
 	if (variable_table.find(name) != variable_table.end())
 	{
-		throw RunTimeError("Variable: " + name + " has been defined");
+		delete variable_table[name];
+		//throw RunTimeError("Variable: " + name + " has been defined");
 	}
 	return variable_table[name] = value;
 }

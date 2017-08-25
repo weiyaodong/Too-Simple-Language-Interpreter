@@ -1,0 +1,52 @@
+fun foldl(f, init, array) => {
+    for (var i = 0; i < array.length; i += 1){
+        init = f(init, array[i]);
+    }
+    ret init;
+}
+
+var sum = (array) => foldl((a, b) => a + b, 0, array);
+
+var reverse = (array) => foldl((a, b) => [b] + a, [], array);
+
+fun map(f, array) => {
+    for (var i = 0; i < array.length; i += 1){
+        array[i] = f(array[i]);
+    }
+    ret array;
+}
+
+fun zipf(f, array1, array2) => {
+    var result = [];
+    for (var i = 0; i < array1.length && i < array2.length; i += 1){
+        result += [f(array1[i], array2[i])];
+    }
+    ret result;
+}
+
+var zipWith = zipf((x, y) => [x, y]);
+
+fun filter(f, array) => {
+    var result = [];
+    for (var i = 0; i < array.length; i += 1) {
+        if (f(array[i]))
+            result += [array[i]];
+    }
+    ret result;
+}
+
+fun flip(f) => {
+    ret (a, b) => f(b, a);
+}
+
+fun slow_sort(array) => {
+    if (array.length <= 1) ret array;
+    var mid = array.length / 2;
+    ret   slow_sort(filter((x) => x < array[mid], array)) 
+        + [array[mid]] 
+        + slow_sort(filter((x) => x > array[mid], array));
+}
+
+fun combine(f, g) => {
+    ret (x) => f(g(x));
+}
