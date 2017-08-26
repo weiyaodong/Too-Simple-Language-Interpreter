@@ -28,7 +28,7 @@ public:
 	enum Token_Type
 	{
 		T_NUMBER,
-		T_KEYWORD,
+		T_COMMENT,
 		T_IDENTIFIER,
 		T_STRING,
 		T_CHAR,
@@ -41,8 +41,8 @@ public:
 
 	Token_Type type;
 
+	std::string cmt;
 	std::string str;
-	std::string kword;
 	std::string ident;
 	std::string oper;
 	std::string bkt;
@@ -158,9 +158,13 @@ public:
 
 	Token parseSymbol();
 
+	Token parseComment();
+
 	Token next_token();
 
 	std::vector<Token> retrieve_all_tokens();
 
 	void match_token(std::string str);
 };
+
+void test_for_tokenizer();

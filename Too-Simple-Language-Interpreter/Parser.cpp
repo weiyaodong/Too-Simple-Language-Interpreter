@@ -16,7 +16,6 @@ std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
 	}
 }
 
-
 void object_type_assert(Object::Object_Type t1, Object::Object_Type t2)
 {
 	if (t1 != t2)
@@ -34,38 +33,7 @@ void subscript_assert(int a, int b)
 }
 
 
-
-std::pair<std::string, Scope*> find_member(ASTNode ast, Scope* scope)
-{
-	if (ast.children[0].type == ASTNode::AST_MEM_EXPR)
-	{
-		auto temp = find_member(ast.children[0], scope);
-		auto temp2 = temp.second->find(temp.first);
-		if (temp2->type != Object::FUNCTION)
-		{
-			throw TypeError(to_string(Object::FUNCTION), to_string(temp2->type));
-		}
-		auto scope2 = temp2->scope;
-		return std::make_pair(ast.children[1].name, scope2);
-	}
-	if (ast.type == ASTNode::AST_MEM_EXPR)
-	{
-		auto temp = scope->find(ast.children[0].name);
-		if (temp->type != Object::FUNCTION)
-		{
-			throw TypeError(to_string(Object::FUNCTION), to_string(temp->type));
-		}
-		auto scope2 = temp->scope;
-		return std::make_pair(ast.children[1].name, scope2);
-	}
-
-	else
-	{
-		throw RunTimeError("Unrecogenized postfix expression");
-	}
-}
-
-ObjectIdentity find_object(ASTNode ast, Scope* scope, const Object* cur_fun)
+ObjectIdentity find_object(const ASTNode& ast, Scope* scope, const Object* cur_fun)
 {
 	if (ast.children.empty())
 	{
@@ -164,8 +132,23 @@ ASTNode::ASTNode(const ASTNode& ast)
 	oper = ast.oper;
 }
 
+ASTNode& ASTNode::operator             = (const ASTNode& ast)
+{
+	num = ast.num;
+	children = ast.children;
+	calc_flag = ast.calc_flag;
+	name = ast.name;
+	type = ast.type;
+	oper = ast.oper;
+	return *this;
+}
+
 Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 {
+	if (type == AST_EMPTY)
+	{
+		return Object();
+	}
 	if (type == AST_MUL_EXPR)
 	{
 		std::vector<int> num;
@@ -1261,6 +1244,12 @@ ASTNode Parser::parse_return_statement()
 	ASTNode temp;
 	temp.type = ASTNode::AST_RET_STMT;
 	match_token("ret");
+	if (current_token() == ";")
+	{
+		match_token();
+		temp.children.push_back(ASTNode());
+		return temp;
+	}
 	temp.children.push_back(parse_expression());
 	match_token(";");
 	return temp;
@@ -1678,17 +1667,18 @@ void test_for_parser()
 	}
 }
 
-void test_for_evaluator2()
+void repl()
 {
 	std::string str;
 	Scope* scope = new Scope;
 	scope->define("true", new Object(true));
 	scope->define("false", new Object(false));
 	scope->define("null", new Object());
-	std::vector<ASTNode> nodes(1000);
+	std::vector<ASTNode*> nodes;
 	int counter = 0;
 	while (true)
 	{
+		nodes.push_back(nullptr);
 		try
 		{
 			str.clear();
@@ -1697,7 +1687,7 @@ void test_for_evaluator2()
 			if (str[0] == ':')
 			{
 				if (str[1] == 'l')
-				{					
+				{
 					std::string filename = str.substr(3, str.length() - 3);
 					std::ifstream in(filename);
 					std::string base;
@@ -1709,8 +1699,8 @@ void test_for_evaluator2()
 					str = "{" + base + "}";
 					try {
 						Parser parser(str);
-						nodes[counter] = parser.parse_statement();
-						nodes[counter].eval(scope, nullptr);
+						nodes[counter] = new ASTNode(parser.parse_statement());
+						nodes[counter]->eval(scope, nullptr);
 						std::cout << "Load " + filename + " successful!" << std::endl;
 					}
 					catch (const Exception& exp)
@@ -1721,6 +1711,10 @@ void test_for_evaluator2()
 				else if (str[1] == 'q')
 				{
 					delete scope;
+					for (size_t i = 0; i < nodes.size(); i++)
+					{
+						delete nodes[i];
+					}
 					std::cout << "Quit Successful" << std::endl;
 					return;
 				}
@@ -1733,11 +1727,11 @@ void test_for_evaluator2()
 					}
 				}
 			}
-			else 
+			else
 			{
 				Parser parser(str);
-				nodes[counter] = parser.parse_statement();
-				std::cout << "TSL> " << to_string(nodes[counter].eval(scope, nullptr)) << std::endl;
+				nodes[counter] = new ASTNode(parser.parse_statement());
+				std::cout << "TSL> " << to_string(nodes[counter]->eval(scope, nullptr)) << std::endl;
 			}
 		}
 		catch (const Exception& exp)
@@ -1754,7 +1748,6 @@ void test_for_evaluator2()
 
 int main(int argc, char* argv[])
 {
-
-	test_for_evaluator2();
-//	test_for_parser();
+	repl();
+	return 0;
 }

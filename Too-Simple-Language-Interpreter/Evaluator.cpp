@@ -303,15 +303,6 @@ Object* Scope::force_define(const std::string& name, Object* value)
 	return variable_table[name] = value;
 }
 
-Object* Scope::find_in_top(const std::string& name)
-{
-	if (variable_table.find(name) != variable_table.end())
-	{
-		return variable_table[name];
-	}
-	throw RunTimeError("Can't find " + name + " in current top scope");
-}
-
 Scope* Scope::update_scope(const std::vector<std::string>& names, const std::vector<Object*>& values) const
 {
 	if (names.size() < values.size())

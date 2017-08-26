@@ -63,6 +63,7 @@ public:
 	ASTNode(ASTNode_Type t, std::string n);
 
 	ASTNode(const ASTNode& ast);
+	ASTNode& operator =(const ASTNode& ast);
 
 	int num;
 	std::vector<ASTNode> children;
@@ -160,7 +161,7 @@ public:
 
 void test_for_parser();
 
-void test_for_evaluator2();
+void repl();
 
 void subscript_assert(int a, int b);
 

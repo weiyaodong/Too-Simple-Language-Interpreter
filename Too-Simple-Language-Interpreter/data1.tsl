@@ -1,24 +1,12 @@
-$ Scapegoat Tree by Too-Simple-Language             $
-$ We just completed the insert and traversal method $
-
 fun create_bst(value, lc, rc) => {
-    var temp = () => value; $ we use temp as the interface of the data structure$
-    var size = 1;           $ and we set the initial size of a bst to 1 $
-
-
-    $ to calculate the actual size of the tree node$
-    if (lc != null) size += lc.size; 
-    if (rc != null) size += rc.size;
-
-    $ 'private' insert method without ensuring the balance of the tree $
-    var _insert = (val) => {
-        size += 1;
+    var temp = () => value;
+    var insert = (val) => {
         if (val < value) {
             if (lc == null) {
                 lc = create_bst(val, null, null);
             }
             else {
-                lc._insert(val);
+                lc.insert(val);
             }
         }
         else {
@@ -26,38 +14,28 @@ fun create_bst(value, lc, rc) => {
                 rc = create_bst(val, null, null);
             }
             else {
-                rc._insert(val);
+                rc.insert(val);
             }
         }
     };
-
-    $ this is the user interface to insert a value to the tree $
-    var insert = (val) => {
-        _insert(val);
-        _check(val);
-    };
-
-    $ to check whether the current tree is imbalanced $
-    var _check = (val) => {
-        if (val == value) ret;
-
-        $ if unsafe , we rebuild the tree $
+    var check = (val) => {
+        if (val == value) {
+            ret;
+        }
         if (is_unsafe()) {
             rebuild();
             ret;
         }
-        if (val < value) lc._check(val);
-        else rc._check(val);
+        if (val < value) {
+            check(lc);
+        }
+        else {
+            check(rc);
+        }
     };
-
     var is_unsafe = () => {
-        var temp3 = false;
-        if(rc != null)  temp3 = rc.size * 2 > size + 2;        
-        if((1 - temp3) && lc != null)  temp3 = lc.size * 2 > size + 2;
-        ret temp3;        
+        ret rc.size * 2 > size + 2 || lc.size * 2 > size + 2;
     };
-
-    $ construct a tree from an ordered sequence $
     var divide_bst = (ary, l, r) => {
         if (l >= r) {
             ret null;
@@ -65,32 +43,26 @@ fun create_bst(value, lc, rc) => {
         var mid = (l + r) / 2;
         ret create_bst(ary[mid], divide_bst(ary, l, mid), divide_bst(ary, mid + 1, r));
     };
-
     var rebuild = () => {
-        var ary = to_ary();
-        var temp2 = divide_bst(ary, 0, ary.length);
+        var ary = run();
+        var temp2 = rebuild(ary, 0, ary.length);
         lc = temp2.lc;
         rc = temp2.rc;
         value = temp2.value;
         size = temp2.size;
     };
-
-    $ use array to represent the structure of the tree$
     var run = () => {
         var tl, tr;
         if (lc == null) tl = []; else tl = [lc.run()];
         if (rc == null) tr = []; else tr = [rc.run()];
         ret tl + [value] + tr;
     };
-
-    $ turn the tree to an array$
     var to_ary = () => {
         var tl, tr;
         if (lc == null) tl = []; else tl = lc.to_ary();
         if (rc == null) tr = []; else tr = rc.to_ary();
         ret tl + [value] + tr;
     };
-
     ret temp;
 }
 

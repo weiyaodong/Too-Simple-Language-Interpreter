@@ -50,3 +50,24 @@ fun slow_sort(array) => {
 fun combine(f, g) => {
     ret (x) => f(g(x));
 }
+
+fun cons(x, y) => {
+    ret (f) => f(x, y);
+}
+
+fun fst(x, y) => {
+    ret x;
+}
+
+fun snd(x, y) => {
+    ret y;
+}
+
+fun car(c) => {
+    c(fst);
+}
+
+fun cdr(c) => {
+    c(snd);
+}
+

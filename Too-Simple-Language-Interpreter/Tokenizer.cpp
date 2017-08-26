@@ -30,7 +30,7 @@ Token::Token(Token_Type t, const std::string& s): type(t)
 {
 	switch (type)
 	{
-	case T_KEYWORD: kword = s;
+	case T_COMMENT: cmt = s;
 		break;
 	case T_BRACKET: bkt = s;
 		break;
@@ -53,7 +53,7 @@ Token::Token(const Token& tok)
 	this->type = tok.type;
 	switch (type)
 	{
-	case T_KEYWORD: kword = tok.kword;
+	case T_COMMENT: cmt = tok.cmt;
 		break;
 	case T_BRACKET: bkt = tok.bkt;
 		break;
@@ -76,7 +76,7 @@ Token& Token::operator=(const Token& tok)
 	this->type = tok.type;
 	switch (type)
 	{
-	case T_KEYWORD: kword = tok.kword;
+	case T_COMMENT: cmt = tok.cmt;
 		break;
 	case T_BRACKET: bkt = tok.bkt;
 		break;
@@ -113,7 +113,7 @@ bool Token::operator==(const Token& tok) const
 	switch (type)
 	{
 	case T_EMPTY: return true;
-	case T_KEYWORD: return kword == tok.kword;
+	case T_COMMENT: return cmt == tok.cmt;
 	case T_BRACKET: return bkt == tok.bkt;
 	case T_IDENTIFIER: return ident == tok.ident;
 	case T_OPERATOR: return oper == tok.oper;
@@ -129,7 +129,7 @@ std::string Token::get_str() const
 	switch (type)
 	{
 	case T_EMPTY: return ("Empty TOKEN!");
-	case T_KEYWORD: return kword;
+	case T_COMMENT: return cmt;
 	case T_BRACKET: return bkt;
 	case T_IDENTIFIER: return ident;
 	case T_OPERATOR: return oper;
@@ -144,7 +144,7 @@ bool Token::operator==(const std::string& str) const
 	switch (type)
 	{
 	case T_EMPTY: return false;
-	case T_KEYWORD: return kword == str;
+	case T_COMMENT: return cmt == str;
 	case T_BRACKET: return bkt == str;
 	case T_IDENTIFIER: return ident == str;
 	case T_OPERATOR: return oper == str;
@@ -171,7 +171,7 @@ std::string to_string<Token::Token_Type>(const Token::Token_Type& ttype)
 	{
 	case Token::T_EMPTY: return("Empty TOKEN!");
 	case Token::T_NUMBER: return "number";
-	case Token::T_KEYWORD: return "keyword";
+	case Token::T_COMMENT: return "comment";
 	case Token::T_IDENTIFIER: return "id";
 	case Token::T_STRING: return "string";
 	case Token::T_CHAR: return "char";
@@ -480,11 +480,18 @@ Token TokenStream::parseSymbol()
 	}
 	auto symbol1 = code.substr(start, pos - start);
 	std::string symbol = symbol1;
-	if (is_keyword(symbol))
-	{
-		return cur = Token(Token::T_KEYWORD, symbol);
-	}
 	return cur = Token(Token::T_IDENTIFIER, symbol);
+}
+
+Token TokenStream::parseComment()
+{
+	match_char('$');
+	while (cur_char() != '$')
+	{
+		pos++;
+	}
+	match_char('$');
+	return Token();
 }
 
 Token TokenStream::next_token()
@@ -508,6 +515,11 @@ Token TokenStream::next_token()
 	if (is_operator(cur_char()))
 	{
 		return parseOperator();
+	}
+	if (cur_char() == '$')
+	{
+		parseComment();
+		return next_token();
 	}
 	if (cur_char() == '\'')
 	{
@@ -565,8 +577,9 @@ void test_for_tokenizer()
 		{
 			std::cout << exp.get_message() << std::endl;
 		}
-		catch (...)
+		catch (const std::exception& exp)
 		{
+			std::cout << exp.what() << std::endl;
 			std::cout << "something happened ..." << std::endl;
 		}
 	}
