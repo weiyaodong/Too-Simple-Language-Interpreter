@@ -53,7 +53,7 @@ public:
 	bool strict_equal(const Object& obj) const;
 
 	Object evaluate() const;
-	Object evaluate(std::vector<Object> arguments) const;
+	Object evaluate(const std::vector<Object>& arguments) const;
 	Object update(std::vector<Object> arguments) const;
 };
 

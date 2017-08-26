@@ -305,6 +305,7 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	if (type == AST_FUN_CALL_EXPR)
 	{
 		Object* fun;
+		Object funn;
 		if (children[0].type == AST_IDENT || children[0].type == AST_MEM_EXPR || children[0].type == AST_VISIT_EXPR)
 		{
 			auto temp = find_object(children[0], scope, current_fun);
@@ -323,32 +324,29 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 		else 
 		{
 			// ReSharper disable once CppMsExtAddressOfClassRValue
-			fun = &children[0].eval(scope, current_fun);
+			funn = children[0].eval(scope, current_fun);
+			fun = &funn;
 			object_type_assert(fun->type, Object::FUNCTION);
 		}
-		object_type_assert(fun->type, Object::FUNCTION);
-		if (children[1].children.size() > fun->parameters.size())
-		{
-			throw RunTimeError("Too many arguments for function : " + to_string(fun));
-		}
+//		if (children[1].children.size() > fun->parameters.size())
+//		{
+//			throw RunTimeError("Too many arguments for function : " + to_string(fun));
+//		}
 		std::vector<Object> param;
 		for (size_t i = 0; i < children[1].children.size(); i++)
 		{
 			param.push_back(children[1].children[i].eval(scope, current_fun));
 		}
-		if (fun->body->type != AST_BLOCK)
-		{
-			return fun->evaluate(param);
-		}
 		try
 		{
-			return fun->evaluate(param);
+			auto temp = fun->evaluate(param);
+			return temp;
 		}
 		catch (const Object& obj)
 		{
 			return obj;
 		}
-		catch (Exception exp)
+		catch (...)
 		{
 			throw;
 		}

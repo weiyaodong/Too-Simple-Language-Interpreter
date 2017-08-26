@@ -155,13 +155,22 @@ Object Object::evaluate() const
 	return *this; // ?
 }
 
-Object Object::evaluate(std::vector<Object> arguments) const
+Object Object::evaluate(const std::vector<Object>& arguments) const
 {
 	if (arguments.size() > parameters.size())
 	{
-		throw RunTimeError("Too many arguments");
+		std::vector<Object> cur(parameters.size()), res(arguments.size() - parameters.size());
+		std::copy(arguments.begin(), arguments.begin() + parameters.size(), cur.begin());
+		std::copy(arguments.begin() + parameters.size(), arguments.end(), res.begin());
+		auto temp = update(cur).evaluate();
+		if (temp.type != FUNCTION)
+		{
+			throw RunTimeError("Too many arguments");
+		}
+		return temp.evaluate(res);
 	}
-	return update(arguments).evaluate();
+	auto temp = update(arguments).evaluate();
+	return temp;
 }
 
 Object Object::update(std::vector<Object> arguments) const
