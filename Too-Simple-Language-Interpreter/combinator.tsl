@@ -1,0 +1,26 @@
+$ The Combinators in Too-Simple-Language $
+
+$ Firstly we introduced the S and K combinators $
+var s = (x, y, z) => x(z, y(z)); $ Y = \x.\y.\z x z (y z) $
+var k = (x, y) => x; $ K = \x.\y. x $
+
+$ We can implement the combinator I by S and K $
+var i = s(k, k); $ I = \x. x$
+
+$ we get \x.\f. f x to apply function$
+var apply = s(k(s(i)), s(k(k), i));
+
+$ and combinators B and C $
+var b = s(k(s), k); $ B = \f.\x.\y. f y x $
+var c = s(s(k(s(k(s), k)), s), k(k)); $ C = \f.\g.\x. f (g x) $
+
+$ omega combinator here $
+$ var o = s(i, i, s(i, i)); $
+
+$ and finally the Y combinator $
+$ var y = (f) => ((x) => f(x(x)))((x) => f(x(x))); \f. (\x. f(x x)) (\x. f(x x)) $
+var y = (f) => ((u) => u(u)) ((x) => f((y) => (x(x))(y)));
+
+$ use Y combinator to get recursion function$
+var _fact = (f, n) => {if (n == 0) ret 1; ret n * f(n - 1);}; 
+var fact = y(_fact); $ fact(5) = 120 $

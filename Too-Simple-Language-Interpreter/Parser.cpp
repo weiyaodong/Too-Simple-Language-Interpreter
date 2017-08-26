@@ -1403,13 +1403,13 @@ ASTNode Parser::parse_mul_expr()
 		if (current_token() == "*")
 		{
 			match_token("*");
-			temp.children.push_back(parse_pri_expr());
+			temp.children.push_back(parse_postfix_expr());
 			temp.calc_flag.push_back(true);
 		}
 		else
 		{
 			match_token("/");
-			temp.children.push_back(parse_pri_expr());
+			temp.children.push_back(parse_postfix_expr());
 			temp.calc_flag.push_back(false);
 		}
 	}
