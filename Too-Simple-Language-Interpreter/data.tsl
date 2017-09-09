@@ -2,7 +2,7 @@ $ Scapegoat Tree by Too-Simple-Language             $
 $ We just completed the insert and traversal method $
 
 fun create_bst(value, lc, rc) => {
-    var temp = () => value; $ we use temp as the interface of the data structure$
+    $ var temp = () => value;  we use temp as the interface of the data structure$
     var size = 1;           $ and we set the initial size of a bst to 1 $
 
 
@@ -65,7 +65,7 @@ fun create_bst(value, lc, rc) => {
         var mid = (l + r) / 2;
         ret create_bst(ary[mid], divide_bst(ary, l, mid), divide_bst(ary, mid + 1, r));
     };
-
+    
     var rebuild = () => {
         var ary = to_ary();
         var temp2 = divide_bst(ary, 0, ary.length);
@@ -91,7 +91,7 @@ fun create_bst(value, lc, rc) => {
         ret tl + [value] + tr;
     };
 
-    ret temp;
+    ret this;
 }
 
 fun build_bst(array) => {

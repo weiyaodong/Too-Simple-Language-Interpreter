@@ -44,7 +44,9 @@ UPDATE 6:
 
 添加了默认柯里化功能，`(x, y) => x + y` 和 `(x) => (y) => x + y` 在调用时等价
 
+UPDATE 7:
 
+更改了函数参数格式，单个参数可以省略括号 `(x) => (y) => x + y + 1` 现在可以写成 `x => y => x + y + 1`
 
 <!-- more -->
 
@@ -207,7 +209,7 @@ return_statement ::= "ret" expression ";"
 
 variable_definition_statement ::= "var" identifier {"=" expression} ";"
 
-function_definition_s tatement ::= "fun" identifier function_def_parameters_list block
+function_definition_statement ::= "fun" identifier function_def_parameters_list block
 
 primary_expression ::= "(" expression ")"
 	| identifier
@@ -257,6 +259,7 @@ lambda_expression ::= function_def_parameters_list "=>" statement
 
 function_def_parameters_list ::= "(" [identifier] ")"
 	| "(" identifier {"," identifier} ")"
+	| identifier
 
 function_call_parameters_list ::= "(" [expression] ")"
 	| "(" expression {"," expression} ")"

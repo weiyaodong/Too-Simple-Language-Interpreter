@@ -1,0 +1,18 @@
+$ Some Regular Algorithms $
+
+fun check_prime(n) => {
+    for (var i = 2; i * i <= n; i += 1) {
+        if ((n / i) * i == n) {
+            ret false;
+        }
+    }
+    ret true;
+}
+
+fun gen(start, end, step) => {
+    var result = [start];
+    for (var i = start + step; i <= end; i += step) {
+        result = result + [i];
+    }
+    ret result;
+}

@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 template<>
 std::string to_string<Object::Object_Type>(const Object::Object_Type& type)
@@ -114,7 +115,7 @@ ASTNode::ASTNode(int val): num(val)
 	type = AST_NUM;
 }
 
-ASTNode::ASTNode(ASTNode_Type t, std::string n): num(0), type(t)
+ASTNode::ASTNode(ASTNode_Type t, const std::string& n): num(0), type(t)
 {
 	if (type == AST_IDENT)
 	{
@@ -603,7 +604,6 @@ Object ASTNode::eval(Scope* scope,const Object* current_fun) const
 	
 	if (type == AST_MEM_EXPR)
 	{
-		// array todo
 		auto temp = children[0].eval(scope, current_fun);
 		if (children[1].type != AST_IDENT)
 		{
@@ -1046,28 +1046,35 @@ ASTNode Parser::parse_function_definition_parameters_list()
 {
 	ASTNode temp;
 	temp.type = ASTNode::AST_FUN_DEF_PARA_LIST;
-	match_token("(");
-	if (current_token() == ")")
-	{
-		match_token(")");
-		return temp;
-	}
-	temp.children.push_back(parse_identifier());
-	ASTNode temp2;
-	while (true)
-	{
-		if (current_token() == ",")
-		{
-			match_token(",");
-			temp.children.push_back(parse_identifier());
-			continue;
-		}
+	if (current_token() == "(") {
+		match_token("(");
 		if (current_token() == ")")
 		{
 			match_token(")");
 			return temp;
 		}
-		throw ParseError("Unexpected token:" + to_string(current_token()));
+		temp.children.push_back(parse_identifier());
+		ASTNode temp2;
+		while (true)
+		{
+			if (current_token() == ",")
+			{
+				match_token(",");
+				temp.children.push_back(parse_identifier());
+				continue;
+			}
+			if (current_token() == ")")
+			{
+				match_token(")");
+				return temp;
+			}
+			throw ParseError("Unexpected token:" + to_string(current_token()));
+		}
+	}
+	else
+	{
+		temp.children.push_back(parse_identifier());
+		return temp;
 	}
 }
 
@@ -1664,6 +1671,82 @@ void test_for_parser()
 		}
 	}
 }
+std::string to_string2(const Object& obj)
+{
+	if (obj.type == Object::NUMBER)
+	{
+		return to_string(obj.num);
+	}
+	if (obj.type == Object::BOOL)
+	{
+		return obj.boo ? "true" : "false";
+	}
+	if (obj.type == Object::NOTHING)
+	{
+		return "Nothing";
+	}
+	if (obj.type == Object::FUNCTION)
+	{
+		return "Function";
+	}
+	if (obj.type == Object::ARRAY)
+	{
+		std::string result = "[";
+		if (obj.array.empty())
+		{
+			return "[]";
+		}
+		result += to_string(*obj.array[0]);
+		for (size_t i = 1; i < obj.array.size(); i++)
+		{
+			result += ", " + to_string(*obj.array[i]);
+		}
+		return result + "]";
+	}
+	throw Exception("Unexpected Object Type ....");
+}
+
+template<>
+std::string to_string<ASTNode::ASTNode_Type>(const ASTNode::ASTNode_Type& type)
+{
+	switch (type)
+	{
+	case ASTNode::AST_ADD_EXPR: return "Add_Expression";
+	case ASTNode::AST_EMPTY: return "Empty";
+	case ASTNode::AST_NUM: return "Number";
+	case ASTNode::AST_CHAR: return "Character";
+	case ASTNode::AST_STRING: return "String";
+	case ASTNode::AST_ARRAY: return "Array";
+	case ASTNode::AST_IDENT: return "Identifier";
+	case ASTNode::AST_STMT: return "Statement";
+	case ASTNode::AST_VAR_DEF_EXPR: return "Variable_Definition_Expression";
+	case ASTNode::AST_MUL_EXPR: return "Mul_Expression";
+	case ASTNode::AST_RELAT_EXPR: return "Relat_Expression";
+	case ASTNode::AST_EQ_EXPR: return "Equal_Expression";
+	case ASTNode::AST_AND_EXPR: return "And_Expression";
+	case ASTNode::AST_OR_EXPR: return "Or_Expression";
+	case ASTNode::AST_PRI_EXPR: return "Primary_Expression";
+	case ASTNode::AST_MEM_EXPR: return "Member_Expression";
+	case ASTNode::AST_VISIT_EXPR: return "Visit_Expression";
+	case ASTNode::AST_ASN_EXPR: return "Assign_Expression";
+	case ASTNode::AST_EXPR: return "Expression";
+	case ASTNode::AST_BLOCK: return "Block";
+	case ASTNode::AST_IF_STMT: return "If_Statement";
+	case ASTNode::AST_PRINT_STMT: return "Print_Statement";
+	case ASTNode::AST_READ_STMT: return "Read_Statement";
+	case ASTNode::AST_WHILE_STMT: return "While_Statement";
+	case ASTNode::AST_FOR_STMT: return "For_Statement";
+	case ASTNode::AST_BREAK_STMT: return "Break_Statement";
+	case ASTNode::AST_CONTINUE_STMT: return "Continue_Statement";
+	case ASTNode::AST_LAMBDA_EXPR: return "Lambda_Expression";
+	case ASTNode::AST_FUN_DEF_STMT: return "Function_Definition_Statement";
+	case ASTNode::AST_FUN_CALL_EXPR: return "Function_Call_Expression";
+	case ASTNode::AST_RET_STMT: return "Return_Statement";
+	case ASTNode::AST_FUN_CALL_PARA_LIST: return "Function_Call_Parameters_List";
+	case ASTNode::AST_FUN_DEF_PARA_LIST: return "Function_Definition_Parameteres_List";
+	default: return "What the fuck?";
+	}
+}
 
 void repl()
 {
@@ -1688,6 +1771,10 @@ void repl()
 				{
 					std::string filename = str.substr(3, str.length() - 3);
 					std::ifstream in(filename);
+					if (!in)
+					{
+						throw Exception("Can't open the file : " + filename);
+					}
 					std::string base;
 					std::string temp;
 					while (std::getline(in, temp))
@@ -1706,7 +1793,7 @@ void repl()
 						std::cout << exp.get_message() << std::endl;
 					}
 				}
-				else if (str[1] == 'q')
+				else if (str == ":q")
 				{
 					delete scope;
 					for (size_t i = 0; i < nodes.size(); i++)
@@ -1718,10 +1805,31 @@ void repl()
 				}
 				else if (str[1] == 's')
 				{
-					std::cout << "Names in global scope : " << std::endl;
-					for (auto var : scope->get_map())
+					if (str == ":s") 
 					{
-						std::cout << var.first << std::endl;
+						std::cout << "Names in global scope : " << std::endl;
+						for (auto var : scope->get_map())
+						{
+							std::cout << var.first << " : " << to_string(var.second->type) << std::endl;
+						}
+					}
+					else
+					{
+						std::string qs = str.substr(3, str.length() - 3);
+						Parser parser(qs);
+						ASTNode temp = parser.parse_expression();
+						auto temp2 = temp.eval(scope, nullptr);
+						if (temp2.type != Object::FUNCTION || temp2.scope->get_map().empty())
+						{
+							std::cout << "Nothing here" << std::endl;
+						}
+						else
+						{
+							for (auto var : temp2.scope->get_map())
+							{
+								std::cout << var.first << " : " << to_string(var.second->type) << std::endl;
+							}
+						}
 					}
 				}
 			}
@@ -1729,7 +1837,7 @@ void repl()
 			{
 				Parser parser(str);
 				nodes[counter] = new ASTNode(parser.parse_statement());
-				std::cout << "TSL> " << to_string(nodes[counter]->eval(scope, nullptr)) << std::endl;
+				std::cout << "TSL> " << to_string2(nodes[counter]->eval(scope, nullptr)) << std::endl;
 			}
 		}
 		catch (const Exception& exp)

@@ -16,7 +16,7 @@ public:
 		AST_NUM,			// number
 		AST_CHAR,			// character todo
 		AST_STRING,			// string todo
-		AST_ARRAY,			// array todo
+		AST_ARRAY,			// array
 		
 		AST_IDENT,			// identifier
 		AST_STMT,			// statement
@@ -54,13 +54,11 @@ public:
 		AST_FUN_DEF_PARA_LIST,	// function definition parameters list
 	};
 
-	// ReSharper disable once CppPossiblyUninitializedMember
 	ASTNode();
 
 	explicit ASTNode(int val);
 
-	// ReSharper disable once CppPossiblyUninitializedMember
-	ASTNode(ASTNode_Type t, std::string n);
+	ASTNode(ASTNode_Type t, const std::string& n);
 
 	ASTNode(const ASTNode& ast);
 	ASTNode& operator =(const ASTNode& ast);

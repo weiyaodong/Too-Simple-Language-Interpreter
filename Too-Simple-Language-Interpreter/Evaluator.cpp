@@ -243,6 +243,7 @@ std::string to_string<Object>(const Object& obj)
 	throw Exception("Unexpected Object Type ....");
 }
 
+
 Scope::Scope(Scope* p)
 {
 	parent = p;
